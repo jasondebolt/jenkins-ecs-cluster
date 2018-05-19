@@ -1,0 +1,11 @@
+{
+  "Parameters": {
+    "Environment": "demo",
+    "VPCCidrBlock": "10.11.0.0/16",
+    "PrivateSubnet1CidrBlock": "10.11.1.0/24",
+    "PrivateSubnet2CidrBlock": "10.11.3.0/24",
+    "PublicSubnet1CidrBlock": "10.11.2.0/24",
+    "PublicSubnet2CidrBlock": "10.11.4.0/24",
+    "Tenancy": "default"
+  }
+}
