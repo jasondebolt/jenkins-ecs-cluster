@@ -1,6 +1,28 @@
 {
   "AWSTemplateFormatVersion": "2010-09-09",
   "Description": "Spins up a highly available Jenkins cluster.",
+  "Metadata" : {
+    "AWS::CloudFormation::Interface" : {
+      "ParameterGroups" : [
+        {
+          "Label" : { "default" : "Global Configuration" },
+          "Parameters" : [
+            "Environment"
+          ]
+        },
+        {
+          "Label" : { "default" : "Network Configuration" },
+          "Parameters" : [
+            "VPCCidrBlock",
+            "PrivateSubnet1CidrBlock",
+            "PrivateSubnet2CidrBlock",
+            "PublicSubnet1CidrBlock",
+            "PublicSubnet2CidrBlock"
+          ]
+        }
+      ]
+    }
+  },
   "Parameters": {
     "Environment": {
       "Description": "The environment (dev, testing, prod, etc.) of the VPC.",
