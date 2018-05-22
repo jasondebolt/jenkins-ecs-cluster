@@ -1,89 +1,182 @@
 {
   "AWSTemplateFormatVersion": "2010-09-09",
-  "Description": "Spins up a highly available Jenkins cluster.",
-  "Metadata" : {
-    "AWS::CloudFormation::Interface" : {
-      "ParameterGroups" : [
-        {
-          "Label" : { "default" : "Global Configuration" },
-          "Parameters" : [
-            "Environment"
-          ]
-        },
-        {
-          "Label" : { "default" : "Network Configuration" },
-          "Parameters" : [
-            "VPCCidrBlock",
-            "PrivateSubnet1CidrBlock",
-            "PrivateSubnet2CidrBlock",
-            "PublicSubnet1CidrBlock",
-            "PublicSubnet2CidrBlock"
-          ]
-        },
-        {
-          "Label" : { "default" : "EC2 Configuration" },
-          "Parameters" : [
-            "KeyName",
-            "InstanceType",
-            "AllowedIPRange"
-          ]
-        },
-        {
-          "Label" : { "default" : "ECS Cluster & Docker Configuration" },
-          "Parameters" : [
-            "ClusterName",
-            "ImageName"
-          ]
-        }
-      ]
-    }
-  },
+  "Description" : "Generates all resources required for a single container ECS service.",
   "Parameters": {
-    "Environment": {
-      "Description": "The environment (dev, testing, prod, etc.) of the VPC.",
+    "ProjectName": {
+      "Description": "The name of your project.",
+      "MinLength": "1",
+      "MaxLength": "20",
+      "AllowedPattern": "^[a-z]+[\\-a-z0-9]*[a-z0-9]+",
+      "ConstraintDescription": "User all lowercase, dashes, or numbers (demo-project) between 1 and 20 characters in length. Must not start with a number, and must not start or end with a dash.",
       "Type": "String"
     },
-    "VPCCidrBlock": {
-      "Type": "String",
-      "Description": "The CIDR range for the VPC. Examples include 10.0.0.0/16, 10.1.0.0/16, 10.2.0.0/16, etc. Make sure to use different CIDR ranges for each VPC you create.",
-      "Default": "10.0.0.0/16"
+    "Environment": {
+      "Description": "The environment to deploy the instance to.",
+      "Type": "String"
     },
-    "PrivateSubnet1CidrBlock": {
-      "Type": "String",
-      "Description": "The CIDR range for the first private subnet. Examples include 10.0.1.0/24, 10.1.1.0/24, 10.2.1.0/24, etc. Make sure the subnet CIDR range is within the same CIDR range as the VPC, and also make sure that the third digit is odd, since it's a private subnet.",
-      "Default": "10.0.1.0/24"
+    "Domain": {
+      "Description": "The domain name that this service will fall under.",
+      "Type": "String"
     },
-    "PrivateSubnet2CidrBlock": {
-      "Type": "String",
-      "Description": "The CIDR range for the second private subnet. Examples include 10.0.3.0/24, 10.1.3.0/24, 10.2.3.0/24, etc. Make sure the subnet CIDR range is within the same CIDR range as the VPC, and also make sure that the third digit is odd, since it's a private subnet.",
-      "Default": "10.0.3.0/24"
+    "SSLCertificateARN": {
+      "Description": "The AWS ACM Certificate ARN.",
+      "Type": "String"
     },
-    "PublicSubnet1CidrBlock": {
-      "Type": "String",
-      "Description": "The CIDR range for the first public subnet. Examples include 10.0.2.0/24, 10.1.2.0/24, 10.2.2.0/24, etc. Make sure the subnet CIDR range is within the same CIDR range as the VPC, and also make sure that the third digit is even, since it's a public subnet.",
-      "Default": "10.0.2.0/24"
+    "HostedZoneId": {
+      "Description": "The Route53 hosted zone id that this service will fall under.",
+      "Type": "String"
     },
-    "PublicSubnet2CidrBlock": {
-      "Type": "String",
-      "Description": "The CIDR range for the second public subnet. Examples include 10.0.4.0/24, 10.1.4.0/24, 10.2.4.0/24, etc. Make sure the subnet CIDR range is within the same CIDR range as the VPC, and also make sure that the third digit is even, since it's a public subnet.",
-      "Default": "10.0.4.0/24"
+    "KeyPairName":{
+      "Type":"AWS::EC2::KeyPair::KeyName",
+      "Description":"Name of an existing EC2 KeyPair to enable SSH access to the ECS instances."
     },
-    "Tenancy": {
-      "Type": "String",
-      "Description": "Then VPC tenancy",
-      "AllowedValues": ["default", "dedicated"],
-      "Default": "default"
+    "NetworkMode": {
+      "Description": "The Docker networking mode to use for the containers in the task, such as none, bridge, or host. For Fargate launch types, you can specify awsvpc only. The none, bridge, or host option won't work for Fargate launch types.",
+      "Default": "awsvpc",
+      "Type": "String"
     },
-    "KeyName": {
-      "Description": "Optional: the EC2 Key Pair to allow SSH access to the EC2 instances of this stack.",
-      "Type": "String",
-      "Default": ""
+    "Cpu": {
+      "Description": "The number of cpu units used by the task. If you are using the Fargate launch type, this field is required. {Cpu: (Allowed Memory), ...} --> {256: (0.5GB, 1GB, 2GB), 512: (1GB, 2GB, 3GB, 4GB), 1024: (2GB, 3GB, 4GB, 5GB, 6GB, 7GB, 8GB), 2048: (Between 4GB and 16GB in 1GB increments), 4096: (Between 8GB and 30GB in 1GB increments) See https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ecs-taskdefinition.html",
+      "Default": "256",
+      "AllowedValues": ["256", "512", "1024", "2048", "4096"],
+      "Type": "String"
+    },
+    "Memory": {
+      "Description": "The amount (in MiB) of memory used by the task. If you are using the Fargate launch type, this field is required and you must use one of the following values, which determines your range of valid values for the cpu parameter. {Cpu: (Allowed Memory), ...} --> {256: (0.5GB, 1GB, 2GB), 512: (1GB, 2GB, 3GB, 4GB), 1024: (2GB, 3GB, 4GB, 5GB, 6GB, 7GB, 8GB), 2048: (Between 4GB and 16GB in 1GB increments), 4096: (Between 8GB and 30GB in 1GB increments) See https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ecs-taskdefinition.html",
+      "Default": "0.5GB",
+      "AllowedValues": ["0.5GB", "1GB", "2GB", "3GB", "4GB", "5GB", "6GB", "7GB", "8GB", "9GB", "10GB", "11GB", "12GB", "13GB", "14GB", "15GB", "16GB", "17GB", "18GB", "19GB", "20GB", "21GB", "22GB", "23GB", "24GB", "25GB", "26GB", "27GB", "28GB", "29GB", "30GB"],
+      "Type": "String"
+    },
+    "Essential": {
+      "Description": "Indicates whether the task stops if this container fails. If you specify true and the container fails, all other containers in the task stop. If you specify false and the container fails, none of the other containers in the task is affected. This value is true by default.",
+      "Default": "true",
+      "AllowedValues": ["true", "false"],
+      "Type": "String"
+    },
+    "ImageName": {
+      "Description": "The short name of the ECR Image",
+      "Type": "String"
+    },
+    "ImageVersion": {
+      "Description": "The version of the ECR Image",
+      "Default": "latest",
+      "Type": "String"
+    },
+    "LaunchType": {
+      "Description": "ECS Launch Type",
+      "AllowedValues": ["FARGATE", "EC2"],
+      "Default": "FARGATE",
+      "Type": "String"
+    },
+    "MaximumPercent": {
+      "Description": "The maximum number of tasks, specified as a percentage of the Amazon ECS service's DesiredCount value, that can run in a service during a deployment",
+      "Default": "200",
+      "Type": "Number"
+    },
+    "MinimumHealthyPercent": {
+      "Description": "The minimum number of tasks, specified as a percentage of the Amazon ECS service's DesiredTaskCount value, that must continue to run and remain healthy during a deployment",
+      "Default": "50",
+      "Type": "Number"
+    },
+    "DesiredTaskCount": {
+      "Description": "The number of simultaneous tasks that you want to run on the cluster. Specify the tasks with the TaskDefinition property",
+      "Type": "Number",
+      "Default": "1"
+    },
+    "HealthCheckGracePeriodSeconds": {
+      "Description": "The period of time, in seconds, that the Amazon ECS service scheduler ignores unhealthy Elastic Load Balancing target health checks after a task has first started.",
+      "Default": "0",
+      "Type": "Number"
+    },
+    "ContainerPort": {
+      "Description": "The port number on the container to direct load balancer traffic to. Your container instances must allow ingress traffic on this port.",
+      "Type": "Number"
+    },
+    "SlavePort": {
+      "Description": "The listen port for Jenkins JNLP slaves.",
+      "Type": "Number"
+    },
+    "AssignPublicIp": {
+      "Description": "Whether to assign a public IP.",
+      "AllowedValues": ["ENABLED", "DISABLED"],
+      "Default": "DISABLED",
+      "Type": "String"
+    },
+    "PlacementConstraintsType": {
+      "Description": "Optional. To ensure that each task in a particular group is running on a different container instance, use distinctInstance. To restrict the selection to a group of valid candidates, use memberOf. distinctInstance is not supported in task definitions.",
+      "AllowedValues": ["distinctInstance", "memberOf", ""],
+      "Default": "",
+      "Type": "String"
+    },
+    "PlacementConstraintsExpression": {
+      "Description": "Totally optional, even if you specify a PlacementConstraintsType. A cluster query language expression to apply to the constraint. If the constraint type is distinctInstance, you can't specify an expression. See https://docs.aws.amazon.com/AmazonECS/latest/developerguide/cluster-query-language.html.",
+      "Default": "",
+      "Type": "String"
+    },
+    "PlacementStrategiesType": {
+      "Description": "Optional. The type of placement strategy. The random placement strategy randomly places tasks on available candidates. The spread placement strategy spreads placement across available candidates evenly based on the field parameter. The binpack strategy places tasks on available candidates that have the least available amount of the resource that is specified with the field parameter. For example, if you binpack on memory, a task is placed on the instance with the least amount of remaining memory (but still enough to run the task",
+      "AllowedValues": ["random", "spread", "binpack", ""],
+      "Default": "",
+      "Type": "String"
+    },
+    "PlacementStrategiesField": {
+      "Description": "Optional only if PlacementStrategiesType is blank or random. The field to apply the placement strategy against. For the spread placement strategy, valid values are instanceId (or host, which has the same effect), or any platform or custom attribute that is applied to a container instance, such as attribute:ecs.availability-zone. For the binpack placement strategy, valid values are cpu and memory. For the random placement strategy, this field is not used.",
+      "Default": "",
+      "Type": "String"
+    },
+    "PlatformVersion": {
+      "Description": "The platform version on which to run your service. If one is not specified, the latest version will be used by default.",
+      "Default": "LATEST",
+      "AllowedValues": ["LATEST", "1.0.0"],
+      "Type": "String"
+    },
+    "WebSubnets": {
+      "Description": "The type of subnets to place this web service in.",
+      "AllowedValues": ["Public", "Private"],
+      "Default": "Public",
+      "Type": "String"
+    },
+    "ELBSubnets": {
+      "Description": "The type of subnets to place the ELB for this service in.",
+      "AllowedValues": ["Public", "Private"],
+      "Default": "Public",
+      "Type": "String"
+    },
+    "Scheme": {
+      "Description": "The elastic load balancer schema",
+      "AllowedValues": ["internal", "internet-facing"],
+      "Default": "internal",
+      "Type": "String"
+    },
+    "VPCPrefix": {
+      "Description": "The 'export' name prefix of the cloudformation stack for the VPC used by this service.",
+      "Type": "String"
+    },
+    "DesiredECSInstances": {
+      "Type":"Number",
+      "Default":"1",
+      "Description":"Number of ECS instances to launch in your ECS cluster for this service. Your instance may be shared with other services in the cluster."
+    },
+    "MinECSInstances": {
+      "Type":"Number",
+      "Default":"1",
+      "Description":"Minimum number of instances that can be launched in your ECS cluster. Your instance may be shared with other services in the cluster."
+    },
+    "MaxECSInstances": {
+      "Type":"Number",
+      "Default":"1",
+      "Description":"Maximum number of instances that can be launched in your ECS cluster. Your instance may be shared with other services in the cluster."
+    },
+    "ContainerLogsRetentionDays": {
+      "Type":"Number",
+      "Default": 14,
+      "Description":"Number of days to retain container logs for"
     },
     "InstanceType": {
-      "Description": "EC2 instance type",
-      "Type": "String",
-      "Default": "m5.2xlarge",
-      "AllowedValues": [
+      "Description":"EC2 instance type",
+      "Type":"String",
+      "Default":"m5.2xlarge",
+      "AllowedValues":[
         "m5.large",
         "m5.xlarge",
         "m5.2xlarge",
@@ -104,138 +197,192 @@
         "c5d.18xlarge",
         "i3.metal"
       ],
-      "ConstraintDescription": "Must be a valid EC2 instance type."
-    },
-    "AllowedIPRange": {
-      "Description": "The IP range allowed to access Jenkins over port 22 and port 80",
-      "Type": "String",
-      "Default": "0.0.0.0/0"
-    },
-    "ClusterName": {
-      "Description": "The lower-case-dash ECS cluster name",
-      "Type": "String",
-      "Default": "jenkins-cluster"
-    },
-    "ImageName": {
-      "Description": "The docker image to use for Jenkins",
-      "Type": "String",
-      "Default": "jenk"
-    },
-    "ImageVersion": {
-      "Description": "The version of the ECR Image",
-      "Default": "latest",
-      "Type": "String"
+      "ConstraintDescription":"Reserved instances. Please choose a valid instance type from our reserved instance types."
     }
   },
-  "Mappings": {
-    "RegionAmazonECSOptimizedAMIMapping": {
-      "us-east-2": {
-        "AMI": "ami-bb8eaede"
+  "Mappings":{
+    "RegionalConfigs":{
+      "us-east-1":{
+        "AMI":"ami-aff65ad2",
       },
-      "us-east-1": {
-        "AMI": "ami-d61027ad"
+      "us-east-2":{
+        "AMI":"ami-64300001",
       },
-      "us-west-2": {
-        "AMI": "ami-c6f81abe"
+      "us-west-1":{
+        "AMI":"ami-69677709",
       },
-      "us-west-1": {
-        "AMI": "ami-514e6431"
+      "us-west-2":{
+        "AMI":"ami-40ddb938",
       },
-      "eu-west-2": {
-        "AMI": "ami-0a85946e"
+      "eu-west-1":{
+        "AMI":"ami-2d386654",
       },
-      "eu-west-1": {
-        "AMI": "ami-bd7e8dc4"
+      "eu-central-1":{
+        "AMI":"ami-9fc39c74",
       },
-      "eu-central-1": {
-        "AMI": "ami-f15ff69e"
+      "ap-northeast-1":{
+        "AMI":"ami-a99d8ad5",
       },
-      "ap-northeast-1": {
-        "AMI": "ami-ab5ea9cd"
+      "ap-southeast-1":{
+        "AMI":"ami-846144f8",
       },
-      "ap-southeast-2": {
-        "AMI": "ami-c3233ba0"
-      },
-      "ap-southeast-1": {
-        "AMI": "ami-ae0b91cd"
-      },
-      "ca-central-1": {
-        "AMI": "ami-32bb0556"
+      "ap-southeast-2":{
+        "AMI":"ami-efda148d",
       }
     }
   },
   "Conditions": {
-    "HasKeyName": {"Fn::Not": [{"Fn::Equals": ["", {"Ref": "KeyName"}]}]}
+    "IsFargate" : {"Fn::Equals" : [
+      {"Ref" : "LaunchType"}, "FARGATE"
+    ]},
+    "IsInternalELB": {"Fn::Equals": [
+      {"Ref": "Scheme"}, "internal"
+    ]},
+    "IsProd" : {"Fn::Equals" : [
+      {"Ref" : "Environment"},
+      "prod"
+    ]},
+    "HasPlacementConstraints" : {"Fn::Not": [
+      {"Fn::Equals" : [
+        {"Ref" : "PlacementConstraintsType"}, ""
+      ]}
+    ]},
+    "HasPlacementStrategies" : {"Fn::Not": [
+      {"Fn::Equals" : [
+        {"Ref" : "PlacementStrategiesType"}, ""
+      ]}
+    ]}
   },
   "Resources": {
-    "ECSJenkinsCluster": {
+    "Cluster": {
       "Type": "AWS::ECS::Cluster",
-      "Properties": {
-        "ClusterName": { "Ref": "ClusterName"}
+      "Properties" : {
+        "ClusterName" : "jenkins"
       }
     },
-    "ECSJenkinsMasterTaskDefinition": {
-      "Type": "AWS::ECS::TaskDefinition",
+    "JenkinsScaleUpPolicy": {
+      "Type" : "AWS::AutoScaling::ScalingPolicy",
+      "Properties" : {
+        "AdjustmentType" : "ChangeInCapacity",
+        "AutoScalingGroupName" : { "Ref": "ECSAutoScalingGroup" },
+        "EstimatedInstanceWarmup" : 60,
+        "MetricAggregationType" : "Average",
+        "PolicyType" : "StepScaling",
+        "StepAdjustments" : [ {
+          "MetricIntervalLowerBound" : 0,
+          "ScalingAdjustment" : 2
+        }]
+      }
+    },
+    "JenkinsScaleUpAlarm" : {
+      "Type" : "AWS::CloudWatch::Alarm",
+      "Properties" : {
+        "AlarmDescription" : "CPU utilization peaked at 70% during the last minute",
+        "AlarmName" : "JenkinsScaleUpAlarm",
+        "AlarmActions": [ { "Ref": "JenkinsScaleUpPolicy" } ],
+        "Dimensions" : [{
+          "Name": "Cluster",
+          "Value": {"Ref": "Cluster"}
+        }],
+        "MetricName" : "CPUReservation",
+        "Namespace" : "AWS/ECS",
+        "ComparisonOperator" : "GreaterThanOrEqualToThreshold",
+        "Statistic" : "Maximum",
+        "Threshold" : 70,
+        "Period" : 60,
+        "EvaluationPeriods": 1,
+        "TreatMissingData" : "notBreaching"
+      }
+    },
+    "JenkinsScaleDownPolicy": {
+      "Type" : "AWS::AutoScaling::ScalingPolicy",
+      "Properties" : {
+        "AdjustmentType" : "PercentChangeInCapacity",
+        "AutoScalingGroupName" : { "Ref": "ECSAutoScalingGroup" },
+        "Cooldown"             : "120",
+        "ScalingAdjustment"    : "-50"
+      }
+    },
+    "JenkinsScaleDownAlarm" : {
+      "Type" : "AWS::CloudWatch::Alarm",
+      "Properties" : {
+        "AlarmDescription" : "CPU utilization is under 50% for the last 10 min (change 10 min to 45 min for prod use as you pay by the hour )",
+        "AlarmName" : "JenkinsScaleDownAlarm",
+        "AlarmActions": [ { "Ref": "JenkinsScaleDownPolicy" } ],
+        "Dimensions" : [{
+          "Name": "Cluster",
+          "Value": {"Ref": "Cluster"}
+        }],
+        "MetricName" : "CPUReservation",
+        "Namespace" : "AWS/ECS",
+        "ComparisonOperator" : "LessThanThreshold",
+        "Statistic" : "Maximum",
+        "Threshold" : 50,
+        "Period" : 600,
+        "EvaluationPeriods": 1,
+        "TreatMissingData" : "notBreaching"
+      }
+    },
+    "EFSSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
       "Properties": {
-        "Family": "jenkins-master",
-        "NetworkMode": "bridge",
-        "ContainerDefinitions": [
+        "GroupDescription": "Security group for EFS mount target",
+        "VpcId": {
+          "Fn::ImportValue": {"Fn::Sub": [
+            "${VPCPrefix}-vpc-VPC", {"VPCPrefix": {"Ref": "VPCPrefix"}}
+          ]}
+        }
+      }
+    },
+    "EFSJenkinsFileSystem": {
+      "Type": "AWS::EFS::FileSystem",
+      "Properties": {
+        "FileSystemTags": [
           {
-            "Name": "jenkins-master",
-            "Image": { "Fn::Join" : [ "", [
-              {"Fn::Join": ["", [
-                {"Ref": "AWS::AccountId"},
-                ".dkr.ecr.",
-                {"Ref": "AWS::Region"},
-                ".amazonaws.com",
-              ]]},
-              "/",
-              { "Ref": "ImageName"},
-              ":",
-              { "Ref": "ImageVersion" }
-              ]]
-            },
-            "LogConfiguration": {
-              "LogDriver":"awslogs",
-              "Options": {
-                "awslogs-group": {
-                  "Ref":"CloudwatchLogsGroup"
-                },
-                "awslogs-region": {
-                  "Ref":"AWS::Region"
-                },
-                "awslogs-stream-prefix": { "Ref": "ImageName" }
-              }
-            },
-            "MountPoints": [
-              {
-                "SourceVolume": "data-volume",
-                "ContainerPath": "/var/jenkins_home"
-              }
-            ],
-            "Essential": true,
-            "Cpu": 1024,
-            "MemoryReservation": 992,
-            "PortMappings": [
-              {
-                "HostPort": 8080,
-                "ContainerPort": 8080,
-                "Protocol": "tcp"
-              },
-              {
-                "HostPort": 50000,
-                "ContainerPort": 50000,
-                "Protocol": "tcp"
-              }
-            ]
+            "Key": "Name",
+            "Value": "EFSJenkinsFileSystem"
           }
-        ],
-        "Volumes": [
+        ]
+      }
+    },
+    "EFSJenkinsMountTargetAZ1": {
+      "Type": "AWS::EFS::MountTarget",
+      "Properties": {
+        "FileSystemId": {
+          "Ref": "EFSJenkinsFileSystem"
+        },
+        "SubnetId": {
+          "Fn::ImportValue": { "Fn::Sub": [
+            "${VPCPrefix}-vpc-${PublicOrPrivate}SubnetAZ1", {
+              "VPCPrefix": {"Ref": "VPCPrefix"},
+              "PublicOrPrivate": {"Ref": "WebSubnets"}
+            }
+          ]}
+        },
+        "SecurityGroups": [
           {
-            "Host": {
-              "SourcePath": "/data/"
-            },
-            "Name": "data-volume"
+            "Ref": "EFSSecurityGroup"
+          }
+        ]
+      }
+    },
+    "EFSJenkinsMountTargetAZ2": {
+      "Type": "AWS::EFS::MountTarget",
+      "Properties": {
+        "FileSystemId": {
+          "Ref": "EFSJenkinsFileSystem"
+        },
+        "SubnetId": {
+          "Fn::ImportValue": { "Fn::Sub": [
+            "${VPCPrefix}-vpc-${PublicOrPrivate}SubnetAZ2", {
+              "VPCPrefix": {"Ref": "VPCPrefix"},
+              "PublicOrPrivate": {"Ref": "WebSubnets"}
+            }
+          ]}
+        },
+        "SecurityGroups": [
+          {
+            "Ref": "EFSSecurityGroup"
           }
         ]
       }
@@ -253,214 +400,432 @@
               }
             ]
           ]
-        }
-      }
-    },
-    "ECSJenkinsService": {
-      "DependsOn": ["JenkinsELB"],
-      "Type": "AWS::ECS::Service",
-      "Properties": {
-        "Cluster": { "Ref": "ClusterName" },
-        "DesiredCount": 1,
-        "ServiceName": "jenkins-master",
-        "TaskDefinition": {
-          "Ref": "ECSJenkinsMasterTaskDefinition"
         },
-        "Role" : { "Ref" : "ECSServiceRole" },
-        "LoadBalancers": [
-          {
-            "LoadBalancerName": {
-              "Ref": "JenkinsELB"
-            },
-            "ContainerPort": "8080",
-            "ContainerName": "jenkins-master"
-          }
-        ]
+        "RetentionInDays": {"Ref": "ContainerLogsRetentionDays"}
       }
     },
-    "JenkinsClusterScaleUpPolicy": {
-      "Type" : "AWS::AutoScaling::ScalingPolicy",
-      "Properties" : {
-        "AdjustmentType" : "ChangeInCapacity",
-        "AutoScalingGroupName" : { "Ref": "JenkinsAutoScalingGroup" },
-        "EstimatedInstanceWarmup" : 60,
-        "MetricAggregationType" : "Average",
-        "PolicyType" : "StepScaling",
-        "StepAdjustments" : [ {
-          "MetricIntervalLowerBound" : 0,
-          "ScalingAdjustment" : 2
-        }]
-      }
-    },
-    "JenkinsClusterScaleUpAlarm" : {
-      "Type" : "AWS::CloudWatch::Alarm",
-      "Properties" : {
-        "AlarmDescription" : "CPU utilization peaked at 70% during the last minute",
-        "AlarmName" : "JenkinsClusterScaleUpAlarm",
-        "AlarmActions": [ { "Ref": "JenkinsClusterScaleUpPolicy" } ],
-        "Dimensions" : [{
-          "Name": "ClusterName",
-          "Value": {"Ref": "ECSJenkinsCluster"}
-        }],
-        "MetricName" : "CPUReservation",
-        "Namespace" : "AWS/ECS",
-        "ComparisonOperator" : "GreaterThanOrEqualToThreshold",
-        "Statistic" : "Maximum",
-        "Threshold" : 70,
-        "Period" : 60,
-        "EvaluationPeriods": 1,
-        "TreatMissingData" : "notBreaching"
-      }
-    },
-    "JenkinsClusterScaleDownPolicy": {
-      "Type" : "AWS::AutoScaling::ScalingPolicy",
-      "Properties" : {
-        "AdjustmentType" : "PercentChangeInCapacity",
-        "AutoScalingGroupName" : { "Ref": "JenkinsAutoScalingGroup" },
-        "Cooldown"             : "120",
-        "ScalingAdjustment"    : "-50"
-      }
-    },
-    "JenkinsClusterScaleDownAlarm" : {
-      "Type" : "AWS::CloudWatch::Alarm",
-      "Properties" : {
-        "AlarmDescription" : "CPU utilization is under 50% for the last 10 min (change 10 min to 45 min for prod use as you pay by the hour )",
-        "AlarmName" : "JenkinsClusterScaleDownAlarm",
-        "AlarmActions": [ { "Ref": "JenkinsClusterScaleDownPolicy" } ],
-        "Dimensions" : [{
-          "Name": "ClusterName",
-          "Value": {"Ref": "ECSJenkinsCluster"}
-        }],
-        "MetricName" : "CPUReservation",
-        "Namespace" : "AWS/ECS",
-        "ComparisonOperator" : "LessThanThreshold",
-        "Statistic" : "Maximum",
-        "Threshold" : 50,
-        "Period" : 600,
-        "EvaluationPeriods": 1,
-        "TreatMissingData" : "notBreaching"
-      }
-    },
-    "EC2JenkinsSecurityGroup": {
-      "Type": "AWS::EC2::SecurityGroup",
+    "TaskExecutionRole": {
+      "Type": "AWS::IAM::Role",
       "Properties": {
-        "GroupDescription": "SecurityGroup for Jenkins instances: master and slaves",
-        "VpcId": {
-          "Ref": "VPC"
-        },
-        "SecurityGroupIngress": [
-          {
-            "IpProtocol": "tcp",
-            "FromPort": "22",
-            "ToPort": "22",
-            "CidrIp": {
-              "Ref": "AllowedIPRange"
-            }
-          },
-          {
-            "IpProtocol": "tcp",
-            "FromPort": "8080",
-            "ToPort": "8080",
-            "CidrIp": {
-              "Ref": "VPCCidrBlock"
-            }
-          },
-          {
-            "IpProtocol": "tcp",
-            "FromPort": "8080",
-            "ToPort": "8080",
-            "CidrIp": {
-              "Ref": "AllowedIPRange"
-            }
-          },
-          {
-            "IpProtocol": "tcp",
-            "FromPort": "50000",
-            "ToPort": "50000",
-            "CidrIp": {
-              "Ref": "VPCCidrBlock"
-            }
-          },
-          {
-            "IpProtocol": "tcp",
-            "FromPort": "50000",
-            "ToPort": "50000",
-            "CidrIp": {
-              "Ref": "AllowedIPRange"
-            }
-          }
-        ]
-      }
-    },
-    "ECSServiceRole":{
-      "Type":"AWS::IAM::Role",
-      "Properties":{
-        "AssumeRolePolicyDocument":{
-          "Statement":[
+        "AssumeRolePolicyDocument": {
+          "Version": "2008-10-17",
+          "Statement": [
             {
-              "Effect":"Allow",
-              "Principal":{
-                "Service":[
-                  "ecs.amazonaws.com"
-                ]
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "ecs-tasks.amazonaws.com"
               },
-              "Action":[
-                "sts:AssumeRole"
-              ]
+              "Action": "sts:AssumeRole"
             }
           ]
         },
-        "Path":"/",
-        "Policies":[
+        "ManagedPolicyArns": [
+          "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
+        ],
+        "RoleName": {"Fn::Join": ["-", [
+          {"Ref": "ProjectName"},
+          {"Ref": "Environment"},
+          "ecs-task-exec"
+        ]]}
+      }
+    },
+    "ECSTaskDefinition": {
+      "Type": "AWS::ECS::TaskDefinition",
+      "DependsOn": ["TaskExecutionRole"],
+      "Properties": {
+        "RequiresCompatibilities": [
+          { "Ref": "LaunchType" }
+        ],
+        "NetworkMode": { "Ref": "NetworkMode" },
+        "Cpu": { "Ref": "Cpu" },
+        "Memory": { "Ref": "Memory" },
+        "ExecutionRoleArn": {
+          "Fn::GetAtt": ["TaskExecutionRole", "Arn"]
+        },
+        "Family": "jenkins-master",
+        "ContainerDefinitions": [
           {
-            "PolicyName": "ecs-service-role",
-            "PolicyDocument":{
-              "Statement":[
-                {
-                  "Effect":"Allow",
-                  "Action":[
-                    "elasticloadbalancing:DeregisterInstancesFromLoadBalancer",
-                    "elasticloadbalancing:DeregisterTargets",
-                    "elasticloadbalancing:Describe*",
-                    "elasticloadbalancing:RegisterInstancesWithLoadBalancer",
-                    "elasticloadbalancing:RegisterTargets",
-                    "ec2:Describe*",
-                    "ec2:AuthorizeSecurityGroupIngress",
-                    "ecr:*"
-                  ],
-                  "Resource":"*"
+            "Name": "jenkins-master",
+            "Environment": [
+              {
+                "Name": "AWS_ACCOUNT_ID",
+                "Value": { "Ref" : "AWS::AccountId" }
+              },
+              {
+                "Name": "AWS_REGION",
+                "Value": { "Ref" : "AWS::Region" }
+              },
+              {
+                "Name": "ECS_CLUSTER",
+                "Value": "jenkins"
+              },
+              {
+                "Name": "ECS_CLUSTER_ARN",
+                "Value": {
+                  "Fn::GetAtt": [
+                    "Cluster",
+                    "Arn"
+                  ]
                 }
-              ]
-            }
+              }
+            ],
+            "Image": { "Fn::Join" : [ "", [
+              {"Fn::Join": ["", [
+                {"Ref": "AWS::AccountId"},
+                ".dkr.ecr.",
+                {"Ref": "AWS::Region"},
+                ".amazonaws.com"
+              ]]},
+              "/",
+              { "Ref": "ImageName"},
+              ":",
+              { "Ref": "ImageVersion" }
+              ]]
+            },
+            "LogConfiguration": {
+              "LogDriver":"awslogs",
+              "Options": {
+                "awslogs-group": {
+                  "Ref":"CloudwatchLogsGroup"
+                },
+                "awslogs-region": {
+                  "Ref":"AWS::Region"
+                },
+                "awslogs-stream-prefix": "jenkins-master"
+              }
+            },
+            "PortMappings": [
+              {
+                "HostPort": {"Ref": "ContainerPort"},
+                "ContainerPort": {"Ref": "ContainerPort"},
+                "Protocol": "tcp"
+              },
+              {
+                "HostPort": {"Ref": "SlavePort"},
+                "ContainerPort": {"Ref": "SlavePort"},
+                "Protocol": "tcp"
+              }
+            ],
+            "Essential": { "Ref": "Essential" },
+            "MountPoints": [
+              {
+                "SourceVolume": "data-volume",
+                "ContainerPath": "/var/jenkins_home"
+              }
+            ]
+          }
+        ],
+        "Volumes": [
+          {
+            "Host": {
+              "SourcePath": "/data/"
+            },
+            "Name": "data-volume"
           }
         ]
       }
     },
-    "EC2JenkinsLaunchConfiguration": {
-      "Type": "AWS::AutoScaling::LaunchConfiguration",
-      "Properties": {
-        "AssociatePublicIpAddress": true,
-        "ImageId": {
-          "Fn::FindInMap": [
-            "RegionAmazonECSOptimizedAMIMapping",
+    "ECSService": {
+      "Type" : "AWS::ECS::Service",
+      "DependsOn": ["ApplicationELB", "Listener80", "Listener443"],
+      "Properties" : {
+        "Cluster" : { "Ref": "Cluster" },
+        "DeploymentConfiguration" : {
+          "MaximumPercent" : { "Ref": "MaximumPercent" },
+          "MinimumHealthyPercent" : { "Ref": "MinimumHealthyPercent" }
+        },
+        "DesiredCount" : { "Ref": "DesiredTaskCount" },
+        "HealthCheckGracePeriodSeconds" : { "Ref": "HealthCheckGracePeriodSeconds" },
+        "LaunchType" : { "Ref" : "LaunchType" },
+        "LoadBalancers" : [
+          {
+            "ContainerName" : "jenkins-master",
+            "ContainerPort" : { "Ref": "ContainerPort" },
+            "TargetGroupArn": {"Ref": "TargetGroup"}
+          }
+        ],
+        "NetworkConfiguration" : {
+          "AwsvpcConfiguration" : {
+            "AssignPublicIp" : {
+              "Fn::If": [
+                "IsFargate",
+                { "Ref": "AssignPublicIp" },
+                { "Ref" : "AWS::NoValue" }
+              ]
+            },
+            "SecurityGroups" : [
+              { "Ref": "WebSG" }
+            ],
+            "Subnets" : [
+              {"Fn::ImportValue": { "Fn::Sub": [
+                "${VPCPrefix}-vpc-${PublicOrPrivate}SubnetAZ1", {
+                  "VPCPrefix": {"Ref": "VPCPrefix"},
+                  "PublicOrPrivate": {"Ref": "WebSubnets"}
+                }]
+              }},
+              {"Fn::ImportValue": { "Fn::Sub": [
+                "${VPCPrefix}-vpc-${PublicOrPrivate}SubnetAZ2", {
+                  "VPCPrefix": {"Ref": "VPCPrefix"},
+                  "PublicOrPrivate": {"Ref": "WebSubnets"}
+                }]
+              }}
+            ]
+          }
+        },
+        "PlacementConstraints" : {
+          "Fn::If" : [
+            "HasPlacementConstraints",
             {
-              "Ref": "AWS::Region"
+              "Type": { "Ref" : "PlacementConstraintsType" },
+              "Expression": { "Ref" : "PlacementConstraintsExpression" }
+            },
+            {"Ref" : "AWS::NoValue"}
+          ]
+        },
+        "PlacementStrategies" : {
+          "Fn::If" : [
+            "HasPlacementStrategies",
+            {
+              "Type": { "Ref" : "PlacementStrategiesType" },
+              "Field": { "Ref" : "PlacementStrategiesField" }
+            },
+            {"Ref" : "AWS::NoValue"}
+          ]
+        },
+        "PlatformVersion": {
+          "Fn::If": [
+            "IsFargate",
+            { "Ref": "PlatformVersion" },
+            { "Ref" : "AWS::NoValue" }
+          ]
+        },
+        "TaskDefinition" : { "Ref": "ECSTaskDefinition" }
+      }
+    },
+    "ApplicationELB": {
+      "Properties": {
+        "IpAddressType": "ipv4",
+        "Name": "jenkins-elb",
+        "LoadBalancerAttributes": {
+          "Fn::If": [
+            "IsInternalELB",
+            {"Ref": "AWS::NoValue"},
+            [
+              {
+                "Key":"idle_timeout.timeout_seconds",
+                "Value":"30"
+              }
+            ]
+          ]
+        },
+        "Scheme": {"Ref": "Scheme"},
+        "SecurityGroups": [
+          { "Ref" : "ApplicationELBSG"}
+        ],
+        "Subnets" : [
+          {"Fn::ImportValue": { "Fn::Sub": [
+            "${VPCPrefix}-vpc-${PublicOrPrivate}SubnetAZ1", {
+              "VPCPrefix": {"Ref": "VPCPrefix"},
+              "PublicOrPrivate": {"Ref": "ELBSubnets"}
+              }]
+          }},
+          {"Fn::ImportValue": { "Fn::Sub": [
+            "${VPCPrefix}-vpc-${PublicOrPrivate}SubnetAZ2", {
+              "VPCPrefix": {"Ref": "VPCPrefix"},
+              "PublicOrPrivate": {"Ref": "ELBSubnets"}
+            }]
+          }}
+        ],
+        "Tags": [
+          {
+            "Key": "ECSCluster",
+            "Value": { "Ref": "Cluster" }
+          }
+        ]
+      },
+      "Type": "AWS::ElasticLoadBalancingV2::LoadBalancer"
+    },
+    "Listener443": {
+      "Properties": {
+        "Certificates": [
+          {
+            "CertificateArn": {"Ref": "SSLCertificateARN"}
+          }
+        ],
+        "DefaultActions": [
+          {
+            "TargetGroupArn": {
+              "Ref": "TargetGroup"
+            },
+            "Type": "forward"
+          }
+        ],
+        "LoadBalancerArn": {
+          "Ref": "ApplicationELB"
+        },
+        "Port": 443,
+        "Protocol": "HTTPS"
+      },
+      "Type": "AWS::ElasticLoadBalancingV2::Listener"
+    },
+    "Listener80": {
+      "Properties": {
+        "DefaultActions": [
+          {
+            "TargetGroupArn": {
+              "Ref": "TargetGroup"
+            },
+            "Type": "forward"
+          }
+        ],
+        "LoadBalancerArn": {
+          "Ref": "ApplicationELB"
+        },
+        "Port": 80,
+        "Protocol": "HTTP"
+      },
+      "Type": "AWS::ElasticLoadBalancingV2::Listener"
+    },
+    "TargetGroup": {
+      "DependsOn": "ApplicationELB",
+      "Properties": {
+        "HealthCheckIntervalSeconds": 10,
+        "HealthCheckPath": "/login",
+        "HealthCheckProtocol": "HTTP",
+        "HealthCheckTimeoutSeconds": 5,
+        "HealthyThresholdCount": 2,
+        "Port": {"Ref": "ContainerPort"},
+        "Protocol": "HTTP",
+        "Tags": [
+          {
+            "Key": "ECSCluster",
+            "Value": { "Ref": "Cluster" }
+          }
+        ],
+        "TargetGroupAttributes": [
+          {
+            "Key": "deregistration_delay.timeout_seconds",
+            "Value": "0"
+          },
+          {
+            "Key": "stickiness.enabled",
+            "Value": "false"
+          }
+        ],
+        "TargetType": "ip",
+        "UnhealthyThresholdCount": 2,
+        "VpcId": {
+          "Fn::ImportValue": {"Fn::Sub": [
+            "${VPCPrefix}-vpc-VPC", {"VPCPrefix": {"Ref": "VPCPrefix"}}
+          ]}
+        }
+      },
+      "Type": "AWS::ElasticLoadBalancingV2::TargetGroup"
+    },
+    "ApplicationELBSG": {
+      "Properties": {
+        "GroupDescription": "Application ELB security group.",
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": {"Fn::Sub": [
+              "${StackName}-elb-sg", {
+                "StackName": {"Ref": "AWS::StackName"}
+              }
+            ]}
+          }
+        ],
+        "VpcId": {
+          "Fn::ImportValue": {"Fn::Sub": [
+            "${VPCPrefix}-vpc-VPC", {"VPCPrefix": {"Ref": "VPCPrefix"}}
+          ]}
+        }
+      },
+      "Type": "AWS::EC2::SecurityGroup"
+    },
+    "ECSAutoScalingGroup":{
+      "Type":"AWS::AutoScaling::AutoScalingGroup",
+      "DependsOn": ["EFSJenkinsMountTargetAZ1", "EFSJenkinsMountTargetAZ2"],
+      "Properties": {
+        "VPCZoneIdentifier": [
+          {"Fn::ImportValue": { "Fn::Sub": [
+            "${VPCPrefix}-vpc-${PublicOrPrivate}SubnetAZ1", {
+              "VPCPrefix": {"Ref": "VPCPrefix"},
+              "PublicOrPrivate": {"Ref": "WebSubnets"}
+            }]
+          }},
+          {"Fn::ImportValue": { "Fn::Sub": [
+            "${VPCPrefix}-vpc-${PublicOrPrivate}SubnetAZ2", {
+              "VPCPrefix": {"Ref": "VPCPrefix"},
+              "PublicOrPrivate": {"Ref": "WebSubnets"}
+            }]
+          }}
+        ],
+        "LaunchConfigurationName": {
+          "Ref": "ContainerInstances"
+        },
+        "MinSize": {
+          "Fn::If": [
+            "IsFargate",
+            "0",
+            { "Ref": "MinECSInstances" }
+          ]
+        },
+        "MaxSize": {
+          "Fn::If": [
+            "IsFargate",
+            "0",
+            { "Ref": "MaxECSInstances" }
+          ]
+        },
+        "DesiredCapacity": {
+          "Fn::If": [
+            "IsFargate",
+            "0",
+            { "Ref": "DesiredECSInstances" }
+          ]
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": {"Fn::Join": ["-", [
+              { "Ref": "Cluster"},
+              "ECSInstance"
+            ]]},
+            "PropagateAtLaunch": "true"
+          }
+        ]
+      },
+      "CreationPolicy": {
+        "ResourceSignal": {
+          "Fn::If": [
+            "IsFargate",
+            { "Ref" : "AWS::NoValue" },
+            { "Timeout": "PT15M" }
+          ]
+        }
+      },
+      "UpdatePolicy": {
+        "AutoScalingReplacingUpdate": {
+          "WillReplace": "true"
+        }
+      }
+    },
+    "ContainerInstances":{
+      "Type":"AWS::AutoScaling::LaunchConfiguration",
+      "Properties":{
+        "ImageId":{
+          "Fn::FindInMap":[
+            "RegionalConfigs",
+            {
+              "Ref":"AWS::Region"
             },
             "AMI"
           ]
         },
-        "IamInstanceProfile": {
-          "Ref": "EC2JenkinsInstanceProfile"
-        },
-        "InstanceType": {
-          "Ref": "InstanceType"
-        },
-        "KeyName": {"Fn::If": ["HasKeyName", {"Ref": "KeyName"}, {"Ref": "AWS::NoValue"}]},
-        "SecurityGroups": [
-          {
-            "Ref": "EC2JenkinsSecurityGroup"
-          }
-        ],
+        "SecurityGroups": [{
+          "Ref": "WebSG"
+        }],
         "BlockDeviceMappings": [
           {
             "DeviceName": "/dev/xvdcz",
@@ -470,78 +835,49 @@
             }
           }
         ],
+        "InstanceType": { "Ref": "InstanceType" },
+        "IamInstanceProfile": { "Ref": "EC2InstanceProfile" },
+        "KeyName": {"Ref": "KeyPairName"},
         "UserData": {
           "Fn::Base64": {
             "Fn::Join": [
               "",
               [
-                "#!/bin/bash\n",
-                "echo 'ECS_CLUSTER=",
+                "#!/bin/bash -xe\n",
+                "echo ECS_CLUSTER=",
                 {
-                  "Ref": "ClusterName"
+                  "Ref": "Cluster"
                 },
-                "' ",
                 " >> /etc/ecs/ecs.config\n",
+
                 "#Mount EFS volume\n",
-                "yum install -y nfs-utils\n",
-                "EC2_AVAIL_ZONE=`curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone`\n",
-                "EC2_REGION=",
-                {
-                  "Ref": "AWS::Region"
-                },
-                "\n",
+                "yum install -y amazon-efs-utils\n",
                 "EFS_FILE_SYSTEM_ID=",
                 {
                   "Ref": "EFSJenkinsFileSystem"
                 },
                 "\n",
-                "EFS_PATH=$EC2_AVAIL_ZONE.$EFS_FILE_SYSTEM_ID.efs.$EC2_REGION.amazonaws.com\n",
                 "mkdir /data\n",
-                "mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 $EFS_PATH:/ /data\n",
+                "mount -t efs $EFS_FILE_SYSTEM_ID:/ /data\n",
                 "#Give ownership to jenkins user\n",
-                "chown 1000 /data\n"
+                "chown 1000 /data\n",
+
+                "yum install -y aws-cfn-bootstrap\n",
+                "/opt/aws/bin/cfn-signal -e $? ",
+                "         --stack ",
+                {
+                  "Ref":"AWS::StackName"
+                },
+                "         --resource ECSAutoScalingGroup ",
+                "         --region ",
+                {
+                  "Ref":"AWS::Region"
+                },
+                "\n"
               ]
             ]
           }
         }
-      }
-    },
-    "JenkinsAutoScalingGroup": {
-      "Type": "AWS::AutoScaling::AutoScalingGroup",
-      "Properties": {
-        "VPCZoneIdentifier": [
-          {"Ref": "PrivateSubnetAZ1"},
-          {"Ref": "PrivateSubnetAZ2"},
-        ],
-        "LaunchConfigurationName": {
-          "Ref": "EC2JenkinsLaunchConfiguration"
-        },
-        "LoadBalancerNames": [
-          {"Ref": "JenkinsELB"}
-        ],
-        "MinSize": "2",
-        "MaxSize": "5",
-        "DesiredCapacity": "2",
-        "HealthCheckType": "EC2",
-        "HealthCheckGracePeriod": "400",
-        "Tags": [
-          {
-            "Key": "Name",
-            "Value": "jenkins-ecs-instance",
-            "PropagateAtLaunch": "true"
-          }
-        ]
-      }
-    },
-    "EC2JenkinsInstanceProfile": {
-      "Type": "AWS::IAM::InstanceProfile",
-      "Properties": {
-        "Path": "/",
-        "Roles": [
-          {
-            "Ref": "EC2Role"
-          }
-        ]
       }
     },
     "EC2Role":{
@@ -565,17 +901,52 @@
         "Path":"/",
         "Policies":[
           {
-            "PolicyName": "ecs-service",
+            "PolicyName":"ecs-service",
+            "PolicyDocument":{
+              "Statement":[
+                {
+                  "Effect":"Allow",
+                  "Action":["*"],
+                  "Resource":"*"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "AutoscalingRole":{
+      "Type":"AWS::IAM::Role",
+      "Properties":{
+        "AssumeRolePolicyDocument":{
+          "Statement":[
+            {
+              "Effect":"Allow",
+              "Principal":{
+                "Service":[
+                  "application-autoscaling.amazonaws.com"
+                ]
+              },
+              "Action":[
+                "sts:AssumeRole"
+              ]
+            }
+          ]
+        },
+        "Path":"/",
+        "Policies":[
+          {
+            "PolicyName":"service-autoscaling",
             "PolicyDocument":{
               "Statement":[
                 {
                   "Effect":"Allow",
                   "Action":[
-                    "ecs:*",
-                    "ecr:*",
-                    "elasticloadbalancing:Describe*",
-                    "logs:CreateLogStream",
-                    "logs:PutLogEvents"
+                    "application-autoscaling:*",
+                    "cloudwatch:DescribeAlarms",
+                    "cloudwatch:PutMetricAlarm",
+                    "ecs:DescribeServices",
+                    "ecs:UpdateService"
                   ],
                   "Resource":"*"
                 }
@@ -585,645 +956,188 @@
         ]
       }
     },
-    "JenkinsELBSecurityGroup": {
-      "Type": "AWS::EC2::SecurityGroup",
-      "Properties": {
-        "GroupDescription": "SecurityGroup for Jenkins ELB",
-        "VpcId": {
-          "Ref": "VPC"
-        },
-        "SecurityGroupIngress": [
+    "EC2InstanceProfile":{
+      "Type":"AWS::IAM::InstanceProfile",
+      "Properties":{
+        "Path":"/",
+        "Roles":[
           {
-            "IpProtocol": "tcp",
-            "FromPort": "80",
-            "ToPort": "80",
-            "CidrIp": {
-              "Ref": "AllowedIPRange"
-            }
+            "Ref":"EC2Role"
           }
         ]
       }
     },
-    "EFSSecurityGroup": {
-      "Type": "AWS::EC2::SecurityGroup",
+    "ELBToELB": {
       "Properties": {
-        "GroupDescription": "Security group for EFS mount target",
-        "VpcId": {
-          "Ref": "VPC"
+        "FromPort": "-1",
+        "GroupId": {
+          "Ref": "ApplicationELBSG"
         },
-        "SecurityGroupIngress": [
-          {
-            "IpProtocol": "tcp",
-            "FromPort": "2049",
-            "ToPort": "2049",
-            "CidrIp": {
-              "Ref": "VPCCidrBlock"
-            }
-          }
-        ]
-      }
+        "IpProtocol": "-1",
+        "SourceSecurityGroupId": {
+          "Ref": "ApplicationELBSG"
+        },
+        "ToPort": "-1"
+      },
+      "Type": "AWS::EC2::SecurityGroupIngress"
     },
-    "EFSJenkinsFileSystem": {
-      "Type": "AWS::EFS::FileSystem",
+    "WorldHttpsToELB": {
       "Properties": {
-        "FileSystemTags": [
+        "CidrIp": "0.0.0.0/0",
+        "FromPort": "443",
+        "GroupId": {
+          "Ref": "ApplicationELBSG"
+        },
+        "IpProtocol": "tcp",
+        "ToPort": "443"
+      },
+      "Type": "AWS::EC2::SecurityGroupIngress"
+    },
+    "WebToWeb": {
+      "Properties": {
+        "FromPort": "-1",
+        "GroupId": {
+          "Ref": "WebSG"
+        },
+        "IpProtocol": "-1",
+        "SourceSecurityGroupId": {
+          "Ref": "WebSG"
+        },
+        "ToPort": "-1"
+      },
+      "Type": "AWS::EC2::SecurityGroupIngress"
+    },
+    "WebToEFS": {
+      "Properties": {
+        "FromPort": "2049",
+        "GroupId": {
+          "Ref": "EFSSecurityGroup"
+        },
+        "IpProtocol": "tcp",
+        "SourceSecurityGroupId": {
+          "Ref": "WebSG"
+        },
+        "ToPort": "2049"
+      },
+      "Type": "AWS::EC2::SecurityGroupIngress"
+    },
+    "MainVPCToWeb": {
+      "Properties": {
+        "FromPort": "-1",
+        "CidrIp": "10.0.0.0/16",
+        "IpProtocol": "-1",
+        "GroupId": {
+          "Ref": "WebSG"
+        },
+        "ToPort": "-1"
+      },
+      "Type": "AWS::EC2::SecurityGroupIngress"
+    },
+    "MainVPCToELB": {
+      "Properties": {
+        "FromPort": "-1",
+        "CidrIp": "10.0.0.0/16",
+        "IpProtocol": "-1",
+        "GroupId": {
+          "Ref": "ApplicationELBSG"
+        },
+        "ToPort": "-1"
+      },
+      "Type": "AWS::EC2::SecurityGroupIngress"
+    },
+    "ELBToWeb": {
+      "Properties": {
+        "FromPort": {"Ref": "ContainerPort"},
+        "GroupId": {
+          "Ref": "WebSG"
+        },
+        "IpProtocol": "tcp",
+        "SourceSecurityGroupId": {
+          "Ref": "ApplicationELBSG"
+        },
+        "ToPort": {"Ref": "ContainerPort"}
+      },
+      "Type": "AWS::EC2::SecurityGroupIngress"
+    },
+    "WebSG": {
+      "Properties": {
+        "GroupDescription": "Web security group.",
+        "Tags": [
           {
             "Key": "Name",
-            "Value": "EFSJenkinsFileSystem"
+            "Value": {"Fn::Sub": [
+              "${StackName}-web-sg", {
+                "StackName": {"Ref": "AWS::StackName"}
+              }
+            ]}
           }
-        ]
-      }
-    },
-    "EFSJenkinsMountTargetAZ1": {
-      "Type": "AWS::EFS::MountTarget",
-      "Properties": {
-        "FileSystemId": {
-          "Ref": "EFSJenkinsFileSystem"
-        },
-        "SubnetId": {
-          "Ref": "PrivateSubnetAZ1"
-        },
-        "SecurityGroups": [
-          {
-            "Ref": "EFSSecurityGroup"
-          }
-        ]
-      }
-    },
-    "EFSJenkinsMountTargetAZ2": {
-      "Type": "AWS::EFS::MountTarget",
-      "Properties": {
-        "FileSystemId": {
-          "Ref": "EFSJenkinsFileSystem"
-        },
-        "SubnetId": {
-          "Ref": "PrivateSubnetAZ2"
-        },
-        "SecurityGroups": [
-          {
-            "Ref": "EFSSecurityGroup"
-          }
-        ]
-      }
-    },
-    "JenkinsELB": {
-      "Type": "AWS::ElasticLoadBalancing::LoadBalancer",
-      "Properties": {
-        "Scheme": "internet-facing",
-        "Subnets": [
-          {"Ref": "PublicSubnetAZ1"},
-          {"Ref": "PublicSubnetAZ2"}
         ],
-        "SecurityGroups": [
-          {
-            "Ref": "JenkinsELBSecurityGroup"
-          }
-        ],
-        "Listeners": [
-          {
-            "InstancePort": "8080",
-            "InstanceProtocol": "HTTP",
-            "LoadBalancerPort": "80",
-            "Protocol": "HTTP",
-            "PolicyNames": [
-              "JenkinsELBStickiness"
-            ]
-          }
-        ],
-        "LBCookieStickinessPolicy": [
-          {
-            "CookieExpirationPeriod": "3600",
-            "PolicyName": "JenkinsELBStickiness"
-          }
-        ],
-        "HealthCheck": {
-          "HealthyThreshold": "3",
-          "Interval": "20",
-          "Target": "HTTP:8080/login",
-          "Timeout": "2",
-          "UnhealthyThreshold": "10"
-        }
-      }
-    },
-    "EIPNATAZ1": {
-      "Type": "AWS::EC2::EIP",
-      "Properties": {
-        "Domain": "vpc"
-      },
-      "Type": "AWS::EC2::EIP"
-    },
-    "EIPNATAZ2": {
-      "Properties": {
-        "Domain": "vpc"
-      },
-      "Type": "AWS::EC2::EIP"
-    },
-    "IGW1": {
-      "Properties": {
-        "Tags": [
-          {
-            "Key": "Name",
-            "Value": {"Fn::Join": ["-", [
-              {"Ref": "Environment"},
-              "IGW1"
-            ]]}
-          }
-        ]
-      },
-      "Type": "AWS::EC2::InternetGateway"
-    },
-    "IGW1Attachment": {
-      "Type": "AWS::EC2::VPCGatewayAttachment",
-      "Properties": {
-        "InternetGatewayId": {
-          "Ref": "IGW1"
-        },
         "VpcId": {
-          "Ref": "VPC"
-        }
-      }
-    },
-    "IGW1AttachmentRoute": {
-      "DependsOn": ["IGW1Attachment"],
-      "Type": "AWS::EC2::Route",
-      "Properties": {
-        "DestinationCidrBlock": "0.0.0.0/0",
-        "GatewayId": {
-          "Ref": "IGW1"
-        },
-        "RouteTableId": {
-          "Ref": "RouteTablePublic"
-        }
-      }
-    },
-    "NatAZ1": {
-      "DependsOn": "IGW1Attachment",
-      "Type": "AWS::EC2::NatGateway",
-      "Properties": {
-        "AllocationId": {
-          "Fn::GetAtt": ["EIPNATAZ1", "AllocationId"]
-        },
-        "SubnetId": {
-          "Ref": "PublicSubnetAZ1"
-        },
-        "Tags": [
-          {
-            "Key": "Name",
-            "Value": {"Fn::Join": ["-", [
-              {"Ref": "Environment"},
-              "NatAZ1"
-            ]]}
-          }
-        ]
-      }
-    },
-    "NatAZ1Route": {
-      "Properties": {
-        "DestinationCidrBlock": "0.0.0.0/0",
-        "NatGatewayId": {
-          "Ref": "NatAZ1"
-        },
-        "RouteTableId": {
-          "Ref": "RouteTablePrivateAZ1"
+          "Fn::ImportValue": {"Fn::Sub": [
+            "${VPCPrefix}-vpc-VPC", {"VPCPrefix": {"Ref": "VPCPrefix"}}
+          ]}
         }
       },
-      "Type": "AWS::EC2::Route"
+      "Type": "AWS::EC2::SecurityGroup"
     },
-    "NatAZ2": {
-      "DependsOn": "IGW1Attachment",
+    "DnsRecordSetGroup": {
       "Properties": {
-        "AllocationId": {
-          "Fn::GetAtt": ["EIPNATAZ2", "AllocationId"]
+        "HostedZoneId": {
+          "Ref": "HostedZoneId"
         },
-        "SubnetId": {
-          "Ref": "PublicSubnetAZ2"
-        },
-        "Tags": [
+        "RecordSets": [
           {
-            "Key": "Name",
-            "Value": {"Fn::Join": ["-", [
-              {"Ref": "Environment"},
-              "NatAZ2"
-            ]]}
+            "AliasTarget": {
+              "DNSName": {
+                "Fn::GetAtt": [
+                  "ApplicationELB",
+                  "DNSName"
+                ]
+              },
+              "HostedZoneId": {
+                "Fn::GetAtt": [
+                  "ApplicationELB",
+                  "CanonicalHostedZoneID"
+                ]
+              }
+            },
+            "Name": {"Fn::Join": ["", [
+              { "Fn::If": [
+                "IsProd",
+                "",
+                {
+                  "Fn::Join": ["", [
+                    {"Ref": "Environment"},
+                    "."
+                  ]]
+                }
+              ]},
+              {"Ref": "Domain"}
+            ]]},
+            "Type": "A"
           }
         ]
       },
-      "Type": "AWS::EC2::NatGateway"
-    },
-    "NatAZ2Route": {
-      "Properties": {
-        "DestinationCidrBlock": "0.0.0.0/0",
-        "NatGatewayId": {
-          "Ref": "NatAZ2"
-        },
-        "RouteTableId": {
-          "Ref": "RouteTablePrivateAZ2"
-        }
-      },
-      "Type": "AWS::EC2::Route"
-    },
-    "PrivateSubnetAZ1": {
-      "Properties": {
-        "AvailabilityZone": {
-          "Fn::Select": ["0", {
-            "Fn::GetAZs": {
-              "Ref": "AWS::Region"
-            }
-          }]
-        },
-        "CidrBlock": {
-          "Ref": "PrivateSubnet1CidrBlock"
-        },
-        "MapPublicIpOnLaunch": "false",
-        "VpcId": {
-          "Ref": "VPC"
-        },
-        "Tags": [
-          {
-            "Key": "Name",
-            "Value": {"Fn::Join": ["-", [
-              {"Ref": "Environment"},
-              "PrivateSubnetAZ1"
-            ]]}
-          }
-        ]
-      },
-      "Type": "AWS::EC2::Subnet"
-    },
-    "PrivateSubnetAZ1RouteTbl": {
-      "Properties": {
-        "RouteTableId": {
-          "Ref": "RouteTablePrivateAZ1"
-        },
-        "SubnetId": {
-          "Ref": "PrivateSubnetAZ1"
-        }
-      },
-      "Type": "AWS::EC2::SubnetRouteTableAssociation"
-    },
-    "PrivateSubnetAZ2": {
-      "Properties": {
-        "AvailabilityZone": {
-          "Fn::Select": ["1", {
-            "Fn::GetAZs": {
-              "Ref": "AWS::Region"
-            }
-          }]
-        },
-        "CidrBlock": {
-          "Ref": "PrivateSubnet2CidrBlock"
-        },
-        "MapPublicIpOnLaunch": "false",
-        "VpcId": {
-          "Ref": "VPC"
-        },
-        "Tags": [
-          {
-            "Key": "Name",
-            "Value": {"Fn::Join": ["-", [
-              {"Ref": "Environment"},
-              "PrivateSubnetAZ2"
-            ]]}
-          }
-        ]
-      },
-      "Type": "AWS::EC2::Subnet"
-    },
-    "PrivateSubnetAZ2RouteTbl": {
-      "Properties": {
-        "RouteTableId": {
-          "Ref": "RouteTablePrivateAZ2"
-        },
-        "SubnetId": {
-          "Ref": "PrivateSubnetAZ2"
-        }
-      },
-      "Type": "AWS::EC2::SubnetRouteTableAssociation"
-    },
-    "PublicSubnetAZ1": {
-      "Properties": {
-        "AvailabilityZone": {
-          "Fn::Select": ["0", {
-            "Fn::GetAZs": {
-              "Ref": "AWS::Region"
-            }
-          }]
-        },
-        "CidrBlock": {
-          "Ref": "PublicSubnet1CidrBlock"
-        },
-        "MapPublicIpOnLaunch": "true",
-        "VpcId": {
-          "Ref": "VPC"
-        },
-        "Tags": [
-          {
-            "Key": "Name",
-            "Value": {"Fn::Join": ["-", [
-              {"Ref": "Environment"},
-              "PublicSubnetAZ1"
-            ]]}
-          }
-        ]
-      },
-      "Type": "AWS::EC2::Subnet"
-    },
-    "PublicSubnetAZ1RouteTbl": {
-      "Properties": {
-        "RouteTableId": {
-          "Ref": "RouteTablePublic"
-        },
-        "SubnetId": {
-          "Ref": "PublicSubnetAZ1"
-        }
-      },
-      "Type": "AWS::EC2::SubnetRouteTableAssociation"
-    },
-    "PublicSubnetAZ2": {
-      "Properties": {
-        "AvailabilityZone": {
-          "Fn::Select": ["1", {
-            "Fn::GetAZs": {
-              "Ref": "AWS::Region"
-            }
-          }]
-        },
-        "CidrBlock": {
-          "Ref": "PublicSubnet2CidrBlock"
-        },
-        "MapPublicIpOnLaunch": "true",
-        "VpcId": {
-          "Ref": "VPC"
-        },
-        "Tags": [
-          {
-            "Key": "Name",
-            "Value": {"Fn::Join": ["-", [
-              {"Ref": "Environment"},
-              "PublicSubnetAZ2"
-            ]]}
-          }
-        ]
-      },
-      "Type": "AWS::EC2::Subnet"
-    },
-    "PublicSubnetAZ2RouteTbl": {
-      "Properties": {
-        "RouteTableId": {
-          "Ref": "RouteTablePublic"
-        },
-        "SubnetId": {
-          "Ref": "PublicSubnetAZ2"
-        }
-      },
-      "Type": "AWS::EC2::SubnetRouteTableAssociation"
-    },
-    "RouteTablePrivateAZ1": {
-      "Properties": {
-        "VpcId": {
-          "Ref": "VPC"
-        },
-        "Tags": [
-          {
-            "Key": "Name",
-            "Value": {"Fn::Join": ["-", [
-              {"Ref": "Environment"},
-              "RouteTablePrivateAZ1"
-            ]]}
-          }
-        ]
-      },
-      "Type": "AWS::EC2::RouteTable"
-    },
-    "RouteTablePrivateAZ2": {
-      "Properties": {
-        "VpcId": {
-          "Ref": "VPC"
-        },
-        "Tags": [
-          {
-            "Key": "Name",
-            "Value": {"Fn::Join": ["-", [
-              {"Ref": "Environment"},
-              "RouteTablePrivateAZ2"
-            ]]}
-          }
-        ]
-      },
-      "Type": "AWS::EC2::RouteTable"
-    },
-    "RouteTablePublic": {
-      "Properties": {
-        "VpcId": {
-          "Ref": "VPC"
-        },
-        "Tags": [
-          {
-            "Key": "Name",
-            "Value": {"Fn::Join": ["-", [
-              {"Ref": "Environment"},
-              "RouteTablePublic"
-            ]]}
-          }
-        ]
-      },
-      "Type": "AWS::EC2::RouteTable"
-    },
-    "VPC": {
-      "Properties": {
-        "CidrBlock": {
-          "Ref": "VPCCidrBlock"
-        },
-        "EnableDnsHostnames": "true",
-        "EnableDnsSupport": "true",
-        "InstanceTenancy": {
-          "Ref": "Tenancy"
-        },
-        "Tags": [
-          {
-            "Key": "Name",
-            "Value": {"Fn::Join": ["-", [
-              {"Ref": "Environment"},
-              "VPC"
-            ]]}
-          }
-        ]
-      },
-      "Type": "AWS::EC2::VPC"
+      "Type": "AWS::Route53::RecordSetGroup"
     }
   },
   "Outputs": {
-    "JenkinsELB" : {
-      "Description": "Jenkins URL",
-      "Value" : {"Fn::Join": ["", ["http://", { "Fn::GetAtt" : [ "JenkinsELB", "DNSName" ]}] ]}
-    },
-    "CIDR": {
-      "Export": {
-        "Name": {
-          "Fn::Join": ["", [{
-            "Ref": "AWS::StackName"
-          }, "-", "CIDR"]]
-        }
-      },
-      "Value": {
-        "Ref": "VPCCidrBlock"
-      }
-    },
-    "EIPNATAZ1": {
-      "Export": {
-        "Name": {
-          "Fn::Join": ["", [{
-            "Ref": "AWS::StackName"
-          }, "-", "EIPNATAZ1"]]
-        }
-      },
-      "Value": {
-        "Ref": "EIPNATAZ1"
-      }
-    },
-    "EIPNATAZ2": {
-      "Export": {
-        "Name": {
-          "Fn::Join": ["", [{
-            "Ref": "AWS::StackName"
-          }, "-", "EIPNATAZ2"]]
-        }
-      },
-      "Value": {
-        "Ref": "EIPNATAZ2"
-      }
-    },
-    "PrivateSubnetAZ1": {
-      "Export": {
-        "Name": {
-          "Fn::Join": ["", [{
-            "Ref": "AWS::StackName"
-          }, "-", "PrivateSubnetAZ1"]]
-        }
-      },
-      "Value": {
-        "Ref": "PrivateSubnetAZ1"
-      }
-    },
-    "PrivateSubnetAZ1AvailabilityZone": {
-      "Export": {
-        "Name": {
-          "Fn::Join": ["", [{
-            "Ref": "AWS::StackName"
-          }, "-", "PrivateSubnetAZ1AvailabilityZone"]]
-        }
-      },
-      "Value": {
-        "Fn::GetAtt": ["PrivateSubnetAZ1", "AvailabilityZone"]
-      }
-    },
-    "PrivateSubnetAZ2AvailabilityZone": {
-      "Export": {
-        "Name": {
-          "Fn::Join": ["", [{
-            "Ref": "AWS::StackName"
-          }, "-", "PrivateSubnetAZ2AvailabilityZone"]]
-        }
-      },
-      "Value": {
-        "Fn::GetAtt": ["PrivateSubnetAZ2", "AvailabilityZone"]
-      }
-    },
-    "PrivateSubnetAZ2": {
-      "Export": {
-        "Name": {
-          "Fn::Join": ["", [{
-            "Ref": "AWS::StackName"
-          }, "-", "PrivateSubnetAZ2"]]
-        }
-      },
-      "Value": {
-        "Ref": "PrivateSubnetAZ2"
-      }
-    },
-    "PublicSubnetAZ1": {
-      "Export": {
-        "Name": {
-          "Fn::Join": ["", [{
-            "Ref": "AWS::StackName"
-          }, "-", "PublicSubnetAZ1"]]
-        }
-      },
-      "Value": {
-        "Ref": "PublicSubnetAZ1"
-      }
-    },
-    "PublicSubnetAZ2": {
-      "Export": {
-        "Name": {
-          "Fn::Join": ["", [{
-            "Ref": "AWS::StackName"
-          }, "-", "PublicSubnetAZ2"]]
-        }
-      },
-      "Value": {
-        "Ref": "PublicSubnetAZ2"
-      }
-    },
-    "RouteTablePrivateAZ1": {
-      "Export": {
-        "Name": {
-          "Fn::Join": ["", [{
-            "Ref": "AWS::StackName"
-          }, "-", "RouteTablePrivateAZ1"]]
-        }
-      },
-      "Value": {
-        "Ref": "RouteTablePrivateAZ1"
-      }
-    },
-    "RouteTablePrivateAZ2": {
-      "Export": {
-        "Name": {
-          "Fn::Join": ["", [{
-            "Ref": "AWS::StackName"
-          }, "-", "RouteTablePrivateAZ2"]]
-        }
-      },
-      "Value": {
-        "Ref": "RouteTablePrivateAZ2"
-      }
-    },
-    "RouteTablePublic": {
-      "Export": {
-        "Name": {
-          "Fn::Join": ["", [{
-            "Ref": "AWS::StackName"
-          }, "-", "RouteTablePublic"]]
-        }
-      },
-      "Value": {
-        "Ref": "RouteTablePublic"
-      }
-    },
-    "VPC": {
-      "Export": {
-        "Name": {
-          "Fn::Join": ["", [{
-            "Ref": "AWS::StackName"
-          }, "-", "VPC"]]
-        }
-      },
-      "Value": {
-        "Ref": "VPC"
-      }
-    },
-    "VPCDefaultSecurityGroup": {
-      "Export": {
-        "Name": {
-          "Fn::Join": ["", [{
-            "Ref": "AWS::StackName"
-          }, "-", "VPCDefaultSecurityGroup"]]
-        }
-      },
-      "Value": {
-        "Fn::GetAtt": ["VPC", "DefaultSecurityGroup"]
-      }
+    "ServiceURL" : {
+      "Description" : "The URL of the service",
+      "Value": {"Fn::Join": ["", [
+        "https://",
+        { "Fn::If": [
+          "IsProd",
+          "",
+          {
+            "Fn::Join": ["", [
+              {"Ref": "Environment"},
+              "."
+            ]]
+          }
+        ]},
+        {"Ref": "Domain"}
+      ]]}
     }
   }
 }
