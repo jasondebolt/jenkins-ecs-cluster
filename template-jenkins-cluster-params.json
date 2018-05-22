@@ -1,11 +1,46 @@
-{
-  "Parameters": {
-    "Environment": "demo",
-    "VPCCidrBlock": "10.11.0.0/16",
-    "PrivateSubnet1CidrBlock": "10.11.1.0/24",
-    "PrivateSubnet2CidrBlock": "10.11.3.0/24",
-    "PublicSubnet1CidrBlock": "10.11.2.0/24",
-    "PublicSubnet2CidrBlock": "10.11.4.0/24",
-    "Tenancy": "default"
-  }
-}
+[
+    {
+        "ParameterKey": "Environment",
+        "ParameterValue": "jenkins-cluster"
+    },
+    {
+        "ParameterKey": "VPCCidrBlock",
+        "ParameterValue": "10.99.0.0/16"
+    },
+    {
+        "ParameterKey": "PrivateSubnet1CidrBlock",
+        "ParameterValue": "10.99.1.0/24"
+    },
+    {
+        "ParameterKey": "PrivateSubnet2CidrBlock",
+        "ParameterValue": "10.99.3.0/24"
+    },
+    {
+        "ParameterKey": "PublicSubnet1CidrBlock",
+        "ParameterValue": "10.99.2.0/24"
+    },
+    {
+        "ParameterKey": "PublicSubnet2CidrBlock",
+        "ParameterValue": "10.99.4.0/24"
+    },
+    {
+        "ParameterKey": "Tenancy",
+        "ParameterValue": "default"
+    },
+    {
+        "ParameterKey": "KeyName",
+        "ParameterValue": "us-east-1-714284646049"
+    },
+    {
+        "ParameterKey": "AllowedIPRange",
+        "ParameterValue": "0.0.0.0/0"
+    },
+    {
+        "ParameterKey": "ImageName",
+        "ParameterValue": "jenk"
+    },
+    {
+        "ParameterKey": "ImageVersion",
+        "ParameterValue": "latest"
+    }
+]

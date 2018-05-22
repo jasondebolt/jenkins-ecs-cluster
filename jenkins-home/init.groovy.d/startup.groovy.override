@@ -1,0 +1,154 @@
+import com.amazonaws.ClientConfiguration
+import com.amazonaws.regions.RegionUtils
+import com.amazonaws.services.ecs.AmazonECSClient
+import com.amazonaws.util.EC2MetadataUtils
+import com.amazonaws.services.elasticloadbalancingv2.*
+import com.amazonaws.services.elasticloadbalancingv2.model.*
+import com.cloudbees.jenkins.plugins.amazonecs.ECSCloud
+import com.cloudbees.jenkins.plugins.amazonecs.ECSTaskTemplate
+import hudson.model.*
+import hudson.plugins.gradle.*
+import hudson.tools.*
+import jenkins.model.*
+import jenkins.model.Jenkins
+import jenkins.model.JenkinsLocationConfiguration
+
+import java.util.logging.Logger
+
+Logger.global.info("[Running] startup script")
+
+String accountId = System.getenv("AWS_ACCOUNT_ID")?:null;
+String ecsClusterName = System.getenv("ECS_CLUSTER")?:null;
+String ecsClusterArn = System.getenv("ECS_CLUSTER_ARN")?:null;
+String awsRegion = System.getenv("AWS_REGION")?:"us-east-1";
+
+Logger.global.info("[Running] startup script")
+
+Logger.global.info("AWS_ACCOUNT_ID: $accountId")
+Logger.global.info("ECS_CLUSTER: $ecsClusterName")
+Logger.global.info("ECS_CLUSTER_ARN: $ecsClusterArn")
+Logger.global.info("AWS_REGION: $awsRegion")
+Logger.global.info("SECURITY GROUPS: " + getSecurityGroups())
+
+configureJenkinsURL()
+configureSecurity()
+configureCloud()
+
+Jenkins.instance.save()
+
+buildJob('seed', new ParametersAction(new StringParameterValue('NumberOfCopies', "5")))
+
+Logger.global.info("[Done] startup script")
+
+private configureJenkinsURL() {
+    String jenkinsURL = queryJenkinsURL()
+    Logger.global.info("Set Jenkins URL to $jenkinsURL")
+    def config = JenkinsLocationConfiguration.get()
+    config.url = jenkinsURL
+    config.save()
+}
+
+private void configureSecurity() {
+    Jenkins.instance.disableSecurity()
+    //this port is fixed so it can be configured in the security group
+    Jenkins.instance.setSlaveAgentPort(50000)
+}
+
+private def buildJob(String jobName, def params = null) {
+    Logger.global.info("Building job '$jobName")
+    def job = Jenkins.instance.getJob(jobName)
+    Jenkins.instance.queue.schedule(job, 0, new CauseAction(new Cause() {
+        @Override
+        String getShortDescription() {
+            'Jenkins startup script'
+        }
+    }), params)
+}
+
+private getClientConfiguration() {
+    new ClientConfiguration()
+}
+
+private String queryElbDNSName() {
+    AmazonElasticLoadBalancingClient client = new AmazonElasticLoadBalancingClient(clientConfiguration);
+    client.setRegion(RegionUtils.getRegion(region))
+    DescribeLoadBalancersRequest request = new DescribeLoadBalancersRequest()
+            .withNames('jenkins-elb');
+    DescribeLoadBalancersResult result = client.describeLoadBalancers(request);
+    result.getLoadBalancers().get(0).getDNSName()
+}
+
+private String getPrivateIP() {
+    EC2MetadataUtils.networkInterfaces.first().localIPv4s.first()
+}
+
+private String getInstanceUrl() {
+    "http://${privateIP}:8080/"
+}
+
+private String queryJenkinsURL() {
+    //assume default port 80
+    "http://${queryElbDNSName()}/"
+}
+
+private String getRegion() {
+    EC2MetadataUtils.instanceInfo.region
+}
+
+private String getSecurityGroups() {
+    EC2MetadataUtils.getSecurityGroups()
+}
+
+private void configureCloud() {
+    try {
+        Logger.global.info("Creating ECS Template")
+        def ecsTemplates = templates = Arrays.asList(
+                //a t2.micro has 992 memory units & 1024 CPU units
+                createECSTaskTemplate('ecs-java', 'cloudbees/jnlp-slave-with-java-build-tools', 992, 1024),
+                createECSTaskTemplate('ecs-javascript', 'cloudbees/jnlp-slave-with-java-build-tools', 496, 512)
+        )
+        String ecsClusterArn = System.getenv("ECS_CLUSTER_ARN")?:null;
+        Logger.global.info("Creating ECS Cloud for $ecsClusterArn")
+        def ecsCloud = new ECSCloud(
+                name = "jenkins_cluster",
+                templates = ecsTemplates,
+                credentialsId = '',
+                cluster = ecsClusterArn,
+                regionName = region,
+                jenkinsUrl = instanceUrl,
+                slaveTimoutInSeconds = 60
+        )
+
+        Jenkins.instance.clouds.clear()
+        Jenkins.instance.clouds.add(ecsCloud)
+    } catch (com.amazonaws.SdkClientException e) {
+        Logger.global.severe({ e.message })
+        Logger.global.severe("ERROR: Could not create ECS config, are you running this container in AWS?")
+    }
+}
+
+//cloudbees/jnlp-slave-with-java-build-tools
+private ECSTaskTemplate createECSTaskTemplate(String label, String image, int softMemory, int cpu) {
+    Logger.global.info("Creating ECS Template '$label' for image '$image' (memory: softMemory, cpu: $cpu)")
+    String awsRegion = System.getenv("AWS_REGION")?:"us-east-1";
+    List<ECSTaskTemplate.LogDriverOption> logDriverOpts = [
+        new ECSTaskTemplate.LogDriverOption("awslogs-group", "buildslaves"),
+        new ECSTaskTemplate.LogDriverOption("awslogs-region", awsRegion)
+    ]
+    new ECSTaskTemplate(
+            templateName = label,
+            label = label,
+            image = image,
+            remoteFSRoot = "/home/jenkins",
+            //memory reserved
+            memory = 0,
+            //soft memory
+            memoryReservation = softMemory,
+            cpu = cpu,
+            privileged = false,
+            logDriverOptions = logDriverOpts,
+            environments = null,
+            extraHosts = null,
+            mountPoints = null
+    )
+}

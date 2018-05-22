@@ -1,7 +1,8 @@
 #### Run a Jenkins cluster on AWS using Elastic Container Service
 
-* Click to launch the CloudFormation stack
-<br />
-<a href="https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?templateURL=https://s3.amazonaws.com/jasondebolt-cloud-formation/template-jenkins-cluster.json">
-<img src="https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png">
-</a>
+#### Local dependencies
+* These scripts have only been tested on a mac
+* $ brew install jq
+* AWS CLI and AWS credentials.
+* Python
+* I didn't want anyone to have to enter IAM roles/users for access control, so I left the ECR Repo IAM permissions open. 
