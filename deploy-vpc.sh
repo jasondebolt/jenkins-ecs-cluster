@@ -16,7 +16,7 @@ if [ $# -ne 1 ]
     exit 1
 fi
 
-ENVIRONMENT=`jq -r '.Parameters.Environment' template-ecs-params.json`
+ENVIRONMENT=`jq -r '.Parameters.Environment' template-jenkins-cluster-params.json`
 
 python parameters_generator.py template-vpc-params.json > temp.json
 

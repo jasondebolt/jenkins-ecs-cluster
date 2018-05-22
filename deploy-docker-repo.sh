@@ -13,7 +13,7 @@ set -e
 #   ./deploy-docker-repo.sh create
 #   ./deploy-docker-repo.sh update
 
-IMAGE_NAME=`jq -r '.Parameters.ImageName' template-ecs-params.json`
+IMAGE_NAME=`jq -r '.Parameters.ImageName' template-jenkins-cluster-params.json`
 
 # Check for valid arguments
 if [ $# -ne 1 ]

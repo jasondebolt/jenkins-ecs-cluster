@@ -18,6 +18,10 @@
       "Description": "The domain name that this service will fall under.",
       "Type": "String"
     },
+    "ClusterName": {
+      "Description": "The name of the ECS cluster",
+      "Type": "String"
+    },
     "SSLCertificateARN": {
       "Description": "The AWS ACM Certificate ARN.",
       "Type": "String"
@@ -177,6 +181,7 @@
       "Type":"String",
       "Default":"m5.2xlarge",
       "AllowedValues":[
+        "t2.micro",
         "m5.large",
         "m5.xlarge",
         "m5.2xlarge",
@@ -257,7 +262,7 @@
     "Cluster": {
       "Type": "AWS::ECS::Cluster",
       "Properties" : {
-        "ClusterName" : "jenkins"
+        "ClusterName" : {"Ref": "ClusterName"}
       }
     },
     "JenkinsScaleUpPolicy": {
@@ -318,7 +323,7 @@
         "ComparisonOperator" : "LessThanThreshold",
         "Statistic" : "Maximum",
         "Threshold" : 50,
-        "Period" : 600,
+        "Period" : 60,
         "EvaluationPeriods": 1,
         "TreatMissingData" : "notBreaching"
       }
@@ -442,10 +447,10 @@
         "ExecutionRoleArn": {
           "Fn::GetAtt": ["TaskExecutionRole", "Arn"]
         },
-        "Family": "jenkins-master",
+        "Family": {"Ref": "ImageName"},
         "ContainerDefinitions": [
           {
-            "Name": "jenkins-master",
+            "Name": {"Ref": "ImageName"},
             "Environment": [
               {
                 "Name": "AWS_ACCOUNT_ID",
@@ -457,7 +462,7 @@
               },
               {
                 "Name": "ECS_CLUSTER",
-                "Value": "jenkins"
+                "Value": {"Ref": "Cluster"}
               },
               {
                 "Name": "ECS_CLUSTER_ARN",
@@ -491,7 +496,7 @@
                 "awslogs-region": {
                   "Ref":"AWS::Region"
                 },
-                "awslogs-stream-prefix": "jenkins-master"
+                "awslogs-stream-prefix": {"Ref": "ImageName"}
               }
             },
             "PortMappings": [
@@ -539,7 +544,7 @@
         "LaunchType" : { "Ref" : "LaunchType" },
         "LoadBalancers" : [
           {
-            "ContainerName" : "jenkins-master",
+            "ContainerName" : {"Ref": "ImageName"},
             "ContainerPort" : { "Ref": "ContainerPort" },
             "TargetGroupArn": {"Ref": "TargetGroup"}
           }

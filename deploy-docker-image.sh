@@ -9,7 +9,7 @@
 
 set -e
 
-IMAGE_NAME=`jq -r '.Parameters.ImageName' template-ecs-params.json`
+IMAGE_NAME=`jq -r '.Parameters.ImageName' template-jenkins-cluster-params.json`
 AWS_ACCOUNT_ID=`aws sts get-caller-identity --output text --query Account`
 AWS_REGION=`aws configure get region`
 
