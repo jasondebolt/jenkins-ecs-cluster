@@ -2,6 +2,26 @@ FROM jenkins/jenkins:2.71-alpine
 
 ENV JENKINS_REF /usr/share/jenkins/ref
 
+ENV STRESS_VERSION=1.0.4 \
+    SHELL=/bin/bash
+
+USER root
+
+RUN apk add --update \
+    python \
+    python-dev \
+    py-pip \
+    build-base \
+    tar zip unzip \
+  && curl -o /tmp/stress-${STRESS_VERSION}.tgz https://people.seas.harvard.edu/~apw/stress/stress-${STRESS_VERSION}.tar.gz \
+  && cd /tmp && tar xvf stress-${STRESS_VERSION}.tgz && rm /tmp/stress-${STRESS_VERSION}.tgz \
+  && cd /tmp/stress-${STRESS_VERSION} \
+  && ./configure && make && make install \
+  && pip install virtualenv \
+  && pip install --upgrade pip setuptools \
+  && pip install awscli \
+  && rm -rf /tmp/* /var/tmp/* /var/cache/apk/* /var/cache/distfiles/*
+
 # install jenkins plugins
 COPY jenkins-home/plugins.txt $JENKINS_REF/
 RUN /usr/local/bin/plugins.sh $JENKINS_REF/plugins.txt

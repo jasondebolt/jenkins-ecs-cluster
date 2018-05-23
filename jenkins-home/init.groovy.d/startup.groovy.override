@@ -21,12 +21,15 @@ String accountId = System.getenv("AWS_ACCOUNT_ID")?:null;
 String ecsClusterName = System.getenv("ECS_CLUSTER")?:null;
 String ecsClusterArn = System.getenv("ECS_CLUSTER_ARN")?:null;
 String awsRegion = System.getenv("AWS_REGION")?:"us-east-1";
+String buildSlavesLogGroup = System.getenv("BUILD_SLAVES_LOG_GROUP");
+String elbName = System.getenv("ELB_NAME");
 
 Logger.global.info("[Running] startup script")
 
 Logger.global.info("AWS_ACCOUNT_ID: $accountId")
 Logger.global.info("ECS_CLUSTER: $ecsClusterName")
 Logger.global.info("ECS_CLUSTER_ARN: $ecsClusterArn")
+Logger.global.info("ELB_NAME: $elbName")
 Logger.global.info("AWS_REGION: $awsRegion")
 Logger.global.info("SECURITY GROUPS: " + getSecurityGroups())
 
@@ -36,7 +39,7 @@ configureCloud()
 
 Jenkins.instance.save()
 
-buildJob('seed', new ParametersAction(new StringParameterValue('NumberOfCopies', "5")))
+buildJob('bootstrap', new ParametersAction(new StringParameterValue('NumberOfCopies', "20")))
 
 Logger.global.info("[Done] startup script")
 
@@ -72,8 +75,9 @@ private getClientConfiguration() {
 private String queryElbDNSName() {
     AmazonElasticLoadBalancingClient client = new AmazonElasticLoadBalancingClient(clientConfiguration);
     client.setRegion(RegionUtils.getRegion(region))
+    String elbName = System.getenv("ELB_NAME");
     DescribeLoadBalancersRequest request = new DescribeLoadBalancersRequest()
-            .withNames('jenkins-elb');
+            .withNames(elbName);
     DescribeLoadBalancersResult result = client.describeLoadBalancers(request);
     result.getLoadBalancers().get(0).getDNSName()
 }
@@ -104,8 +108,8 @@ private void configureCloud() {
         Logger.global.info("Creating ECS Template")
         def ecsTemplates = templates = Arrays.asList(
                 //a t2.micro has 992 memory units & 1024 CPU units
-                createECSTaskTemplate('ecs-java', 'cloudbees/jnlp-slave-with-java-build-tools', 992, 1024),
-                createECSTaskTemplate('ecs-javascript', 'cloudbees/jnlp-slave-with-java-build-tools', 496, 512)
+                createECSTaskTemplate('java-runner', 'cloudbees/jnlp-slave-with-java-build-tools', 496, 512),
+                createECSTaskTemplate('cpp-runner', 'cloudbees/jnlp-slave-with-java-build-tools', 496, 512)
         )
         String ecsClusterArn = System.getenv("ECS_CLUSTER_ARN")?:null;
         Logger.global.info("Creating ECS Cloud for $ecsClusterArn")
@@ -131,8 +135,9 @@ private void configureCloud() {
 private ECSTaskTemplate createECSTaskTemplate(String label, String image, int softMemory, int cpu) {
     Logger.global.info("Creating ECS Template '$label' for image '$image' (memory: softMemory, cpu: $cpu)")
     String awsRegion = System.getenv("AWS_REGION")?:"us-east-1";
+    String buildSlavesLogGroup = System.getenv("BUILD_SLAVES_LOG_GROUP");
     List<ECSTaskTemplate.LogDriverOption> logDriverOpts = [
-        new ECSTaskTemplate.LogDriverOption("awslogs-group", "buildslaves"),
+        new ECSTaskTemplate.LogDriverOption("awslogs-group", buildSlavesLogGroup),
         new ECSTaskTemplate.LogDriverOption("awslogs-region", awsRegion)
     ]
     new ECSTaskTemplate(
