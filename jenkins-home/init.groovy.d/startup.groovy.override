@@ -108,8 +108,9 @@ private void configureCloud() {
         Logger.global.info("Creating ECS Template")
         def ecsTemplates = templates = Arrays.asList(
                 //a t2.micro has 992 memory units & 1024 CPU units
-                createECSTaskTemplate('java-runner', 'cloudbees/jnlp-slave-with-java-build-tools', 496, 512),
-                createECSTaskTemplate('cpp-runner', 'cloudbees/jnlp-slave-with-java-build-tools', 496, 512)
+                //a t2.2xlarge has 31744 memory units & 8192 CPU units
+                createECSTaskTemplate('java-runner', 'cloudbees/jnlp-slave-with-java-build-tools', 992, 1024),
+                createECSTaskTemplate('cpp-runner', 'cloudbees/jnlp-slave-with-java-build-tools', 992, 1024)
         )
         String ecsClusterArn = System.getenv("ECS_CLUSTER_ARN")?:null;
         Logger.global.info("Creating ECS Cloud for $ecsClusterArn")

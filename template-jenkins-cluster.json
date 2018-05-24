@@ -364,13 +364,12 @@
           "Name": "Cluster",
           "Value": {"Ref": "Cluster"}
         }],
-        "MetricName" : "CPUReservation",
+        "MetricName" : "CPUUtilization",
         "Namespace" : "AWS/ECS",
         "ComparisonOperator" : "GreaterThanOrEqualToThreshold",
-        "Statistic" : "Maximum",
+        "Statistic" : "Average",
         "Threshold" : {"Ref": "CpuReservationAlarmScaleUpThreshold"},
         "Period" : 60,
-        "Unit": "Seconds",
         "EvaluationPeriods": 1,
         "TreatMissingData" : "notBreaching"
       }
@@ -404,13 +403,12 @@
           "Name": "Cluster",
           "Value": {"Ref": "Cluster"}
         }],
-        "MetricName" : "CPUReservation",
+        "MetricName" : "CPUUtilization",
         "Namespace" : "AWS/ECS",
         "ComparisonOperator" : "LessThanThreshold",
-        "Statistic" : "Maximum",
+        "Statistic" : "Average",
         "Threshold" : 50,
         "Period" : 600,
-        "Unit": "Seconds",
         "EvaluationPeriods": 1,
         "TreatMissingData" : "notBreaching"
       }

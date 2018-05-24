@@ -1,7 +1,7 @@
 {
   "Parameters": {
-    "Environment": "devops11",
-    "ClusterName": "jenkins-cluster11",
+    "Environment": "devops-advanced",
+    "ClusterName": "jenkins-cluster-advanced",
     "ProjectName": "jenkins",
     "ImageName": "jenkins-master",
     "IpWhitelist": "73.15.22.99/32",
@@ -19,7 +19,8 @@
     "HostedZoneId": "Z26KY8AGSSM28M",
     "ImageVersion": "IMAGE_TAG",
     "InstanceType": "t2.2xlarge",
-    "JenkinsMasterMemoryReservation": "4000",
+    "JenkinsMasterMemoryReservation": "992",
+    "JenkinsMasterTaskCpu": "1024",
     "KeyPairName": "us-east-1-714284646049",
     "LaunchType": "EC2",
     "MaxECSInstances": "6",

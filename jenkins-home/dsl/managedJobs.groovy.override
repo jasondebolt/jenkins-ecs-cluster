@@ -5,16 +5,16 @@ def generatedJobs = new java.util.LinkedList<String>()
 (1..numberOfCopies).each{ i->
 
     job(generateJobName(generatedJobs, "BashForLoop", i)) {
-        description("Bash For Loop")
+        description("Bash Loop 1")
         label('java-runner')
         steps {
             shell('''
 #!/bin/bash
 set -e
 
-for i in {1..1000000}
+for number in {1..1000000}
 do
-    echo $i
+    echo "$number"
 done
 
 echo Done
@@ -22,16 +22,19 @@ echo Done
         }
     }
 
-
-    job(generateJobName(generatedJobs, "BashSleep", i)) {
-        description("Bash Sleep")
+    job(generateJobName(generatedJobs, "BashForLoop2", i)) {
+        description("Bash Loop 2")
         label('cpp-runner')
         steps {
             shell('''
 #!/bin/bash
 set -e
 
-sleep 60
+for number in {1..1000000}
+do
+    echo "$number"
+done
+
 echo Done
 ''')
         }
