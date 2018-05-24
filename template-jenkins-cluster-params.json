@@ -1,16 +1,14 @@
 {
   "Parameters": {
-    "Environment": "devops-advanced",
-    "ClusterName": "jenkins-cluster-advanced",
+    "Environment": "devops-awesome",
+    "ClusterName": "jenkins-cluster-awesome",
     "ProjectName": "jenkins",
     "ImageName": "jenkins-master",
     "IpWhitelist": "73.15.22.99/32",
     "AssignPublicIp": "ENABLED",
-    "CpuReservationAlarmScaleUpThreshold": "20",
     "ContainerLogsRetentionDays": "14",
     "ContainerPort": "8080",
     "SlavePort": "50000",
-    "PlacementConstraintsType": "distinctInstance",
     "Domain": "mosaic-phoenix.com",
     "ELBSubnets": "Public",
     "WebSubnets": "Private",

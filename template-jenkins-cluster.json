@@ -181,11 +181,6 @@
       "Type": "String",
       "Default": "devops"
     },
-    "CpuReservationAlarmScaleUpThreshold": {
-      "Type":"Number",
-      "Description":"The CPU reservation threshold at which to scale up EC2 instances. The default is set artificially low to demo auto scaling.",
-      "Default":"20",
-    },
     "DesiredECSInstances": {
       "Type":"Number",
       "Description":"Number of ECS instances to launch in your ECS cluster for this service. Your instance may be shared with other services in the cluster.",
@@ -333,46 +328,73 @@
     "JenkinsScaleUpPolicy": {
       "Type" : "AWS::AutoScaling::ScalingPolicy",
       "Properties" : {
-        "AdjustmentType" : "ChangeInCapacity",
+        "AdjustmentType" : "PercentChangeInCapacity",
         "AutoScalingGroupName" : { "Ref": "ECSAutoScalingGroup" },
-        "EstimatedInstanceWarmup" : 60,
-        "MetricAggregationType" : "Average",
-        "PolicyType" : "StepScaling",
-        "StepAdjustments" : [ {
-          "MetricIntervalLowerBound" : 0,
-          "ScalingAdjustment" : 2
-        }]
+        "Cooldown"             : "60",
+        "ScalingAdjustment"    : "25"
       }
     },
-    "JenkinsScaleUpAlarm" : {
-      "Type" : "AWS::CloudWatch::Alarm",
-      "Properties" : {
-        "AlarmDescription" : "CPU utilization peaked at 70% during the last minute",
-        "AlarmName" : {
-          "Fn::Join":[
-            "-",
-            [
-              "JenkinsScaleUpAlarm",
-              {
-                "Ref":"AWS::StackName"
-              }
+    "JenkinsScaleUpAlarm": {
+       "Type": "AWS::CloudWatch::Alarm",
+       "Properties": {
+          "AlarmDescription": "Scale-up if CPU is greater than 40% for 2 minutes",
+          "AlarmName" : {
+            "Fn::Join":[
+              "-",
+              [
+                "JenkinsScaleUpAlarm",
+                {
+                  "Ref":"AWS::StackName"
+                }
+              ]
             ]
-          ]
-        },
-        "AlarmActions": [ { "Ref": "JenkinsScaleUpPolicy" } ],
-        "Dimensions" : [{
-          "Name": "Cluster",
-          "Value": {"Ref": "Cluster"}
-        }],
-        "MetricName" : "CPUUtilization",
-        "Namespace" : "AWS/ECS",
-        "ComparisonOperator" : "GreaterThanOrEqualToThreshold",
-        "Statistic" : "Average",
-        "Threshold" : {"Ref": "CpuReservationAlarmScaleUpThreshold"},
-        "Period" : 60,
-        "EvaluationPeriods": 1,
-        "TreatMissingData" : "notBreaching"
-      }
+          },
+          "MetricName": "CPUUtilization",
+          "Namespace": "AWS/EC2",
+          "Statistic": "Average",
+          "Period": "60",
+          "EvaluationPeriods": "1",
+          "Threshold": "10",
+          "AlarmActions": [ { "Ref": "JenkinsScaleUpPolicy" } ],
+          "Dimensions": [
+             {
+                "Name": "AutoScalingGroupName",
+                "Value": { "Ref": "ECSAutoScalingGroup" }
+             }
+          ],
+          "ComparisonOperator": "GreaterThanThreshold"
+       }
+    },
+    "JenkinsScaleDownAlarm": {
+       "Type": "AWS::CloudWatch::Alarm",
+       "Properties": {
+          "AlarmDescription": "Scale-down if CPU is less than 10% for 4 minutes",
+          "AlarmName" : {
+            "Fn::Join":[
+              "-",
+              [
+                "JenkinsScaleDownAlarm",
+                {
+                  "Ref":"AWS::StackName"
+                }
+              ]
+            ]
+          },
+          "MetricName": "CPUUtilization",
+          "Namespace": "AWS/EC2",
+          "Statistic": "Average",
+          "Period": "300",
+          "EvaluationPeriods": "1",
+          "Threshold": "10",
+          "AlarmActions": [ { "Ref": "JenkinsScaleDownPolicy" } ],
+          "Dimensions": [
+             {
+                "Name": "AutoScalingGroupName",
+                "Value": { "Ref": "ECSAutoScalingGroup" }
+             }
+          ],
+          "ComparisonOperator": "LessThanThreshold"
+       }
     },
     "JenkinsScaleDownPolicy": {
       "Type" : "AWS::AutoScaling::ScalingPolicy",
@@ -381,36 +403,6 @@
         "AutoScalingGroupName" : { "Ref": "ECSAutoScalingGroup" },
         "Cooldown"             : "120",
         "ScalingAdjustment"    : "-50"
-      }
-    },
-    "JenkinsScaleDownAlarm" : {
-      "Type" : "AWS::CloudWatch::Alarm",
-      "Properties" : {
-        "AlarmDescription" : "CPU utilization is under 50% for the last 10 min.",
-        "AlarmName" : {
-          "Fn::Join":[
-            "-",
-            [
-              "JenkinsScaleDownAlarm",
-              {
-                "Ref":"AWS::StackName"
-              }
-            ]
-          ]
-        },
-        "AlarmActions": [ { "Ref": "JenkinsScaleDownPolicy" } ],
-        "Dimensions" : [{
-          "Name": "Cluster",
-          "Value": {"Ref": "Cluster"}
-        }],
-        "MetricName" : "CPUUtilization",
-        "Namespace" : "AWS/ECS",
-        "ComparisonOperator" : "LessThanThreshold",
-        "Statistic" : "Average",
-        "Threshold" : 50,
-        "Period" : 600,
-        "EvaluationPeriods": 1,
-        "TreatMissingData" : "notBreaching"
       }
     },
     "EFSSecurityGroup": {

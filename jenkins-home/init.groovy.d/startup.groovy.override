@@ -39,7 +39,7 @@ configureCloud()
 
 Jenkins.instance.save()
 
-buildJob('bootstrap', new ParametersAction(new StringParameterValue('NumberOfCopies', "20")))
+buildJob('bootstrap', new ParametersAction(new StringParameterValue('NumberOfCopies', "60")))
 
 Logger.global.info("[Done] startup script")
 
