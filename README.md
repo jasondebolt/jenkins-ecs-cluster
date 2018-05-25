@@ -3,6 +3,7 @@ You can run the Jenkins cluster either by clicking the big yellow buttons below 
 
 
 ### Deploying using the web interface
+0) Run this command: "aws iam create-service-linked-role --aws-service-name ecs.amazonaws.com"
 1) Click on the VPC button below and click the blue "next" button.
 2) The name of the stack should be <b> devops-vpc </b>.
 3) Leave the default values, but <b> make sure to call the stack "devops-vpc"</b>.
