@@ -80,7 +80,7 @@
     "JenkinsMasterMemoryReservation": {
       "Description": "Optional. The number of MiB of memory to reserve for the container. When system memory is under contention, Docker attempts to keep the container memory within the limit. If the container requires more memory, it can consume up to the value specified by the Memory property or all of the available memory on the container instance—whichever comes first. This is called a soft limit.",
       "Type": "String",
-      "Default": ""
+      "Default": "30000"
     },
     "JenkinsSlaveTaskCpu": {
       "Description": "The number of cpu units used by the task. If you are using the Fargate launch type, this field is required. {Cpu: (Allowed Memory), ...} --> {256: (0.5GB, 1GB, 2GB), 512: (1GB, 2GB, 3GB, 4GB), 1024: (2GB, 3GB, 4GB, 5GB, 6GB, 7GB, 8GB), 2048: (Between 4GB and 16GB in 1GB increments), 4096: (Between 8GB and 30GB in 1GB increments) See https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ecs-taskdefinition.html",
@@ -107,7 +107,7 @@
     "JenkinsSlaveMemoryReservation": {
       "Description": "Optional. The number of MiB of memory to reserve for the container. When system memory is under contention, Docker attempts to keep the container memory within the limit. If the container requires more memory, it can consume up to the value specified by the Memory property or all of the available memory on the container instance—whichever comes first. This is called a soft limit.",
       "Type": "String",
-      "Default": ""
+      "Default": "992"
     },
     "MasterTaskEssential": {
       "Description": "Indicates whether the task stops if this container fails. If you specify true and the container fails, all other containers in the task stop. If you specify false and the container fails, none of the other containers in the task is affected. This value is true by default.",
