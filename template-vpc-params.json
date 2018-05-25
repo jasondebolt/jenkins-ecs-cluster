@@ -1,0 +1,11 @@
+{
+  "Parameters": {
+    "Environment": "devops",
+    "VPCCidrBlock": "10.99.0.0/16",
+    "PrivateSubnet1CidrBlock": "10.99.1.0/24",
+    "PrivateSubnet2CidrBlock": "10.99.3.0/24",
+    "PublicSubnet1CidrBlock": "10.99.2.0/24",
+    "PublicSubnet2CidrBlock": "10.99.4.0/24",
+    "Tenancy": "default"
+  }
+}
