@@ -21,7 +21,7 @@ PROJECT_NAME=`jq -r '.Parameters.ProjectName' template-jenkins-cluster-params.js
 ENVIRONMENT=`jq -r '.Parameters.Environment' template-jenkins-cluster-params.json`
 #IMAGE_TAG=$ENVIRONMENT-`date +"%Y-%m-%d-%H%M%S"`
 IMAGE_TAG='latest'
-CLOUDFORMATION_BUCKET_NAME='mosaic-phoenix-microservice'
+CLOUDFORMATION_BUCKET_NAME='{your-bucket-name}'
 
 IMAGE_NAME=`jq -r '.Parameters.MasterImageName' template-jenkins-cluster-params.json`
 ECR_REPO=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$IMAGE_NAME:$IMAGE_TAG
