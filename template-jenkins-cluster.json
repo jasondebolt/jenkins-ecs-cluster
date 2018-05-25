@@ -26,8 +26,13 @@
       "Type": "String",
       "Default": "enter-your-domain-here.com"
     },
-    "ClusterName": {
-      "Description": "The name of the ECS cluster",
+    "MasterClusterName": {
+      "Description": "The name of the ECS Jenkins master cluster",
+      "Type": "String",
+      "Default": "jenkins-cluster"
+    },
+    "SlaveClusterName": {
+      "Description": "The name of the ECS Jenkins slave cluster",
       "Type": "String",
       "Default": "jenkins-cluster"
     },
@@ -46,7 +51,7 @@
       "Description":"Name of an existing EC2 KeyPair to enable SSH access to the ECS instances. Do not include the '.pem' extension.",
       "Default": ""
     },
-    "NetworkMode": {
+    "JenkinsMasterNetworkMode": {
       "Description": "The Docker networking mode to use for the containers in the task, such as none, bridge, or host. For Fargate launch types, you can specify awsvpc only. The none, bridge, or host option won't work for Fargate launch types.",
       "Type": "String",
       "Default": "awsvpc"
@@ -76,20 +81,58 @@
     "JenkinsMasterMemoryReservation": {
       "Description": "Optional. The number of MiB of memory to reserve for the container. When system memory is under contention, Docker attempts to keep the container memory within the limit. If the container requires more memory, it can consume up to the value specified by the Memory property or all of the available memory on the container instance—whichever comes first. This is called a soft limit.",
       "Type": "String",
-      "Default": "30000"
+      "Default": ""
     },
-    "Essential": {
+    "JenkinsSlaveTaskCpu": {
+      "Description": "The number of cpu units used by the task. If you are using the Fargate launch type, this field is required. {Cpu: (Allowed Memory), ...} --> {256: (0.5GB, 1GB, 2GB), 512: (1GB, 2GB, 3GB, 4GB), 1024: (2GB, 3GB, 4GB, 5GB, 6GB, 7GB, 8GB), 2048: (Between 4GB and 16GB in 1GB increments), 4096: (Between 8GB and 30GB in 1GB increments) See https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ecs-taskdefinition.html",
+      "AllowedValues": ["", "256", "512", "1024", "2048", "4096"],
+      "Type": "String",
+      "Default": ""
+    },
+    "JenkinsSlaveTaskMemory": {
+      "Description": "The amount (in MiB) of memory used by the task. If you are using the Fargate launch type, this field is required and you must use one of the following values, which determines your range of valid values for the cpu parameter. {Cpu: (Allowed Memory), ...} --> {256: (0.5GB, 1GB, 2GB), 512: (1GB, 2GB, 3GB, 4GB), 1024: (2GB, 3GB, 4GB, 5GB, 6GB, 7GB, 8GB), 2048: (Between 4GB and 16GB in 1GB increments), 4096: (Between 8GB and 30GB in 1GB increments) See https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ecs-taskdefinition.html",
+      "AllowedValues": ["", "0.5GB", "1GB", "2GB", "3GB", "4GB", "5GB", "6GB", "7GB", "8GB", "9GB", "10GB", "11GB", "12GB", "13GB", "14GB", "15GB", "16GB", "17GB", "18GB", "19GB", "20GB", "21GB", "22GB", "23GB", "24GB", "25GB", "26GB", "27GB", "28GB", "29GB", "30GB"],
+      "Type": "String",
+      "Default": ""
+    },
+    "JenkinsSlaveContainerCpu": {
+      "Description": "Optional. The minimum number of CPU units to reserve for the container. Containers share unallocated CPU units with other containers on the instance by using the same ratio as their allocated CPU units.",
+      "Type": "String",
+      "Default": ""
+    },
+    "JenkinsSlaveContainerMemory": {
+      "Description": "Conditionally required. The number of MiB of memory to reserve for the container. If your container attempts to exceed the allocated memory, the container is terminated. You must specify one or both of the Memory or MemoryReservation properties. If you specify both, the value for the Memory property must be greater than the value of the MemoryReservation property.",
+      "Type": "String",
+      "Default": ""
+    },
+    "JenkinsSlaveMemoryReservation": {
+      "Description": "Optional. The number of MiB of memory to reserve for the container. When system memory is under contention, Docker attempts to keep the container memory within the limit. If the container requires more memory, it can consume up to the value specified by the Memory property or all of the available memory on the container instance—whichever comes first. This is called a soft limit.",
+      "Type": "String",
+      "Default": ""
+    },
+    "MasterTaskEssential": {
       "Description": "Indicates whether the task stops if this container fails. If you specify true and the container fails, all other containers in the task stop. If you specify false and the container fails, none of the other containers in the task is affected. This value is true by default.",
       "AllowedValues": ["true", "false"],
       "Type": "String",
       "Default": "true"
     },
-    "ImageName": {
-      "Description": "The short name of the ECR Image",
+    "SlaveTaskEssential": {
+      "Description": "Indicates whether the task stops if this container fails. If you specify true and the container fails, all other containers in the task stop. If you specify false and the container fails, none of the other containers in the task is affected. This value is true by default.",
+      "AllowedValues": ["true", "false"],
+      "Type": "String",
+      "Default": "true"
+    },
+    "MasterImageName": {
+      "Description": "The short name of the Jenkins master ECR Image",
       "Type": "String",
       "Default": "jenkins-master"
     },
-    "ImageVersion": {
+    "SlaveImageName": {
+      "Description": "The short name of the Jenkins slave docker Image",
+      "Type": "String",
+      "Default": "cloudbees/jnlp-slave-with-java-build-tools"
+    },
+    "MasterImageVersion": {
       "Description": "The version of the ECR Image",
       "Type": "String",
       "Default": "latest"
@@ -106,11 +149,11 @@
       "Default": "200"
     },
     "MinimumHealthyPercent": {
-      "Description": "The minimum number of tasks, specified as a percentage of the Amazon ECS service's DesiredJenkinsMasterCount value, that must continue to run and remain healthy during a deployment",
+      "Description": "The minimum number of tasks, specified as a percentage of the Amazon ECS service's DesiredJenkinsMasterTaskCount value, that must continue to run and remain healthy during a deployment",
       "Type": "Number",
       "Default": "50"
     },
-    "DesiredJenkinsMasterCount": {
+    "DesiredJenkinsMasterTaskCount": {
       "Description": "Jenkins master tasks within the Jenkins ECS service. Leave this at 1 or else you will get a new Jenkins instance per page refresh, which would lead to strange behavior. If you create a different URL for each jenkins master container, this value could be > 1.",
       "Type": "Number",
       "Default": "1"
@@ -181,20 +224,35 @@
       "Type": "String",
       "Default": "devops"
     },
-    "DesiredECSInstances": {
+    "DesiredMasterECSInstances": {
       "Type":"Number",
-      "Description":"Number of ECS instances to launch in your ECS cluster for this service. Your instance may be shared with other services in the cluster.",
+      "Description":"Number of Jenkins master ECS instances to launch in your ECS cluster for this service. Your instance may be shared with other services in the cluster.",
+      "Default":"1",
+    },
+    "MinMasterECSInstances": {
+      "Type":"Number",
+      "Description":"Minimum number of Jenkins master ECS instances that can be launched in your ECS cluster. Your instance may be shared with other services in the cluster.",
+      "Default":"1"
+    },
+    "MaxMasterECSInstances": {
+      "Type":"Number",
+      "Description":"Maximum number of Jenkins master ECS instances that can be launched in your ECS cluster. Your instance may be shared with other services in the cluster.",
+      "Default":"1"
+    },
+    "DesiredSlaveECSInstances": {
+      "Type":"Number",
+      "Description":"Number of Jenkins slave ECS instances to launch in your ECS cluster for this service. Your instance may be shared with other services in the cluster.",
       "Default":"2",
     },
-    "MinECSInstances": {
+    "MinSlaveECSInstances": {
       "Type":"Number",
-      "Description":"Minimum number of instances that can be launched in your ECS cluster. Your instance may be shared with other services in the cluster.",
-      "Default":"5"
-    },
-    "MaxECSInstances": {
-      "Type":"Number",
-      "Description":"Maximum number of instances that can be launched in your ECS cluster. Your instance may be shared with other services in the cluster.",
+      "Description":"Minimum number of Jenkins slave ECS instances that can be launched in your ECS cluster. Your instance may be shared with other services in the cluster.",
       "Default":"1"
+    },
+    "MaxSlaveECSInstances": {
+      "Type":"Number",
+      "Description":"Maximum number of Jenkins slave ECS instances that can be launched in your ECS cluster. Your instance may be shared with other services in the cluster.",
+      "Default":"6"
     },
     "ContainerLogsRetentionDays": {
       "Type":"Number",
@@ -302,6 +360,31 @@
         {"Ref" : "JenkinsMasterMemoryReservation"}, ""
       ]}
     ]},
+    "HasJenkinsSlaveTaskMemory" : {"Fn::Not": [
+      {"Fn::Equals" : [
+        {"Ref" : "JenkinsSlaveTaskMemory"}, ""
+      ]}
+    ]},
+    "HasJenkinsSlaveTaskCpu" : {"Fn::Not": [
+      {"Fn::Equals" : [
+        {"Ref" : "JenkinsSlaveTaskCpu"}, ""
+      ]}
+    ]},
+    "HasJenkinsSlaveContainerMemory" : {"Fn::Not": [
+      {"Fn::Equals" : [
+        {"Ref" : "JenkinsSlaveContainerMemory"}, ""
+      ]}
+    ]},
+    "HasJenkinsSlaveContainerCpu" : {"Fn::Not": [
+      {"Fn::Equals" : [
+        {"Ref" : "JenkinsSlaveContainerCpu"}, ""
+      ]}
+    ]},
+    "HasJenkinsSlaveMemoryReservation" : {"Fn::Not": [
+      {"Fn::Equals" : [
+        {"Ref" : "JenkinsSlaveMemoryReservation"}, ""
+      ]}
+    ]},
     "HasPlacementConstraints" : {"Fn::Not": [
       {"Fn::Equals" : [
         {"Ref" : "PlacementConstraintsType"}, ""
@@ -319,17 +402,23 @@
     ]}
   },
   "Resources": {
-    "Cluster": {
+    "MasterCluster": {
       "Type": "AWS::ECS::Cluster",
       "Properties" : {
-        "ClusterName" : {"Ref": "ClusterName"}
+        "ClusterName" : {"Ref": "MasterClusterName"}
+      }
+    },
+    "SlaveCluster": {
+      "Type": "AWS::ECS::Cluster",
+      "Properties" : {
+        "ClusterName" : {"Ref": "SlaveClusterName"}
       }
     },
     "JenkinsScaleUpPolicy": {
       "Type" : "AWS::AutoScaling::ScalingPolicy",
       "Properties" : {
         "AdjustmentType" : "PercentChangeInCapacity",
-        "AutoScalingGroupName" : { "Ref": "ECSAutoScalingGroup" },
+        "AutoScalingGroupName" : { "Ref": "ECSSlaveAutoScalingGroup" },
         "Cooldown"             : "60",
         "ScalingAdjustment"    : "25"
       }
@@ -350,16 +439,16 @@
             ]
           },
           "MetricName": "CPUUtilization",
-          "Namespace": "AWS/EC2",
-          "Statistic": "Average",
+          "Namespace": "AWS/ECS",
+          "Statistic": "Maximum",
           "Period": "60",
           "EvaluationPeriods": "1",
-          "Threshold": "10",
+          "Threshold": "5",
           "AlarmActions": [ { "Ref": "JenkinsScaleUpPolicy" } ],
           "Dimensions": [
              {
-                "Name": "AutoScalingGroupName",
-                "Value": { "Ref": "ECSAutoScalingGroup" }
+                "Name": "ClusterName",
+                "Value": { "Ref": "SlaveCluster" }
              }
           ],
           "ComparisonOperator": "GreaterThanThreshold"
@@ -381,16 +470,16 @@
             ]
           },
           "MetricName": "CPUUtilization",
-          "Namespace": "AWS/EC2",
+          "Namespace": "AWS/ECS",
           "Statistic": "Average",
           "Period": "300",
           "EvaluationPeriods": "1",
-          "Threshold": "10",
+          "Threshold": "5",
           "AlarmActions": [ { "Ref": "JenkinsScaleDownPolicy" } ],
           "Dimensions": [
              {
-                "Name": "AutoScalingGroupName",
-                "Value": { "Ref": "ECSAutoScalingGroup" }
+                "Name": "ClusterName",
+                "Value": { "Ref": "SlaveCluster" }
              }
           ],
           "ComparisonOperator": "LessThanThreshold"
@@ -400,7 +489,7 @@
       "Type" : "AWS::AutoScaling::ScalingPolicy",
       "Properties" : {
         "AdjustmentType" : "PercentChangeInCapacity",
-        "AutoScalingGroupName" : { "Ref": "ECSAutoScalingGroup" },
+        "AutoScalingGroupName" : { "Ref": "ECSSlaveAutoScalingGroup" },
         "Cooldown"             : "120",
         "ScalingAdjustment"    : "-50"
       }
@@ -528,14 +617,14 @@
         ]]}
       }
     },
-    "ECSTaskDefinition": {
+    "ECSMasterTaskDefinition": {
       "Type": "AWS::ECS::TaskDefinition",
       "DependsOn": ["TaskExecutionRole", "ApplicationELB"],
       "Properties": {
         "RequiresCompatibilities": [
           { "Ref": "LaunchType" }
         ],
-        "NetworkMode": { "Ref": "NetworkMode" },
+        "NetworkMode": { "Ref": "JenkinsMasterNetworkMode" },
         "Cpu": {
           "Fn::If" : [
             "HasJenkinsMasterTaskCpu",
@@ -553,10 +642,10 @@
         "ExecutionRoleArn": {
           "Fn::GetAtt": ["TaskExecutionRole", "Arn"]
         },
-        "Family": {"Ref": "ImageName"},
+        "Family": {"Ref": "MasterImageName"},
         "ContainerDefinitions": [
           {
-            "Name": {"Ref": "ImageName"},
+            "Name": {"Ref": "MasterImageName"},
             "Environment": [
               {
                 "Name": "AWS_ACCOUNT_ID",
@@ -568,13 +657,38 @@
               },
               {
                 "Name": "ECS_CLUSTER",
-                "Value": {"Ref": "Cluster"}
+                "Value": {"Ref": "SlaveCluster"}
+              },
+              {
+                "Name": "SLAVE_TASK_DEFINITION_ARN",
+                "Value": {"Ref": "ECSSlaveTaskDefinition"}
+              },
+              {
+                "Name": "SECURITY_GROUP",
+                "Value": {"Ref": "WebSG"}
+              },
+              {
+                "Name": "SUBNETS",
+                "Value": {"Fn::Join": [",", [
+                  {"Fn::ImportValue": { "Fn::Sub": [
+                    "${VPCPrefix}-vpc-${PublicOrPrivate}SubnetAZ1", {
+                      "VPCPrefix": {"Ref": "VPCPrefix"},
+                      "PublicOrPrivate": {"Ref": "WebSubnets"}
+                    }]
+                  }},
+                  {"Fn::ImportValue": { "Fn::Sub": [
+                    "${VPCPrefix}-vpc-${PublicOrPrivate}SubnetAZ2", {
+                      "VPCPrefix": {"Ref": "VPCPrefix"},
+                      "PublicOrPrivate": {"Ref": "WebSubnets"}
+                    }]
+                  }}
+                ]]}
               },
               {
                 "Name": "ECS_CLUSTER_ARN",
                 "Value": {
                   "Fn::GetAtt": [
-                    "Cluster",
+                    "SlaveCluster",
                     "Arn"
                   ]
                 }
@@ -601,9 +715,9 @@
                 ".amazonaws.com"
               ]]},
               "/",
-              { "Ref": "ImageName"},
+              { "Ref": "MasterImageName"},
               ":",
-              { "Ref": "ImageVersion" }
+              { "Ref": "MasterImageVersion" }
               ]]
             },
             "Cpu": {
@@ -636,7 +750,7 @@
                 "awslogs-region": {
                   "Ref":"AWS::Region"
                 },
-                "awslogs-stream-prefix": {"Ref": "ImageName"}
+                "awslogs-stream-prefix": {"Ref": "MasterImageName"}
               }
             },
             "PortMappings": [
@@ -651,7 +765,7 @@
                 "Protocol": "tcp"
               }
             ],
-            "Essential": { "Ref": "Essential" },
+            "Essential": { "Ref": "MasterTaskEssential" },
             "MountPoints": [
               {
                 "SourceVolume": "data-volume",
@@ -670,21 +784,140 @@
         ]
       }
     },
-    "ECSService": {
+    "ECSSlaveTaskDefinition": {
+      "Type": "AWS::ECS::TaskDefinition",
+      "DependsOn": ["TaskExecutionRole"],
+      "Properties": {
+        "RequiresCompatibilities": [
+          { "Ref": "LaunchType" }
+        ],
+        "NetworkMode": "bridge",
+        "Cpu": {
+          "Fn::If" : [
+            "HasJenkinsSlaveTaskCpu",
+            {"Ref": "JenkinsSlaveTaskCpu"},
+            {"Ref" : "AWS::NoValue"}
+          ]
+        },
+        "Memory": {
+          "Fn::If" : [
+            "HasJenkinsSlaveTaskMemory",
+            {"Ref": "JenkinsSlaveTaskMemory"},
+            {"Ref" : "AWS::NoValue"}
+          ]
+        },
+        "ExecutionRoleArn": {
+          "Fn::GetAtt": ["TaskExecutionRole", "Arn"]
+        },
+        "Family": "jenkins-slave",
+        "ContainerDefinitions": [
+          {
+            "Name": "jenkins-slave",
+            "Environment": [
+              {
+                "Name": "AWS_ACCOUNT_ID",
+                "Value": { "Ref" : "AWS::AccountId" }
+              },
+              {
+                "Name": "AWS_REGION",
+                "Value": { "Ref" : "AWS::Region" }
+              },
+              {
+                "Name": "ECS_CLUSTER",
+                "Value": {"Ref": "SlaveCluster"}
+              },
+              {
+                "Name": "ECS_CLUSTER_ARN",
+                "Value": {
+                  "Fn::GetAtt": [
+                    "SlaveCluster",
+                    "Arn"
+                  ]
+                }
+              },
+              {
+                "Name": "BUILD_SLAVES_LOG_GROUP",
+                "Value": { "Ref" : "CloudwatchLogsGroupBuildSlaves"}
+              }
+            ],
+            "Image": {"Ref": "SlaveImageName"},
+            "Cpu": {
+              "Fn::If" : [
+                "HasJenkinsSlaveContainerCpu",
+                {"Ref": "JenkinsSlaveContainerCpu"},
+                {"Ref" : "AWS::NoValue"}
+              ]
+            },
+            "Memory": {
+              "Fn::If" : [
+                "HasJenkinsSlaveContainerMemory",
+                {"Ref": "JenkinsSlaveContainerMemory"},
+                {"Ref" : "AWS::NoValue"}
+              ]
+            },
+            "MemoryReservation": {
+              "Fn::If" : [
+                "HasJenkinsSlaveMemoryReservation",
+                {"Ref": "JenkinsSlaveMemoryReservation"},
+                {"Ref" : "AWS::NoValue"}
+              ]
+            },
+            "LogConfiguration": {
+              "LogDriver":"awslogs",
+              "Options": {
+                "awslogs-group": {
+                  "Ref":"CloudwatchLogsGroup"
+                },
+                "awslogs-region": {
+                  "Ref":"AWS::Region"
+                },
+                "awslogs-stream-prefix": "jenkins-slave"
+              }
+            },
+            "PortMappings": [
+              {
+                "ContainerPort": {"Ref": "ContainerPort"},
+                "Protocol": "tcp"
+              },
+              {
+                "ContainerPort": {"Ref": "SlavePort"},
+                "Protocol": "tcp"
+              }
+            ],
+            "Essential": { "Ref": "SlaveTaskEssential" },
+            "MountPoints": [
+              {
+                "SourceVolume": "data-volume",
+                "ContainerPath": "/var/jenkins_home"
+              }
+            ]
+          }
+        ],
+        "Volumes": [
+          {
+            "Host": {
+              "SourcePath": "/data/"
+            },
+            "Name": "data-volume"
+          }
+        ]
+      }
+    },
+    "ECSMasterService": {
       "Type" : "AWS::ECS::Service",
       "DependsOn": ["ApplicationELB", "Listener80", "Listener443"],
       "Properties" : {
-        "Cluster" : { "Ref": "Cluster" },
+        "Cluster" : { "Ref": "MasterCluster" },
         "DeploymentConfiguration" : {
           "MaximumPercent" : { "Ref": "MaximumPercent" },
           "MinimumHealthyPercent" : { "Ref": "MinimumHealthyPercent" }
         },
-        "DesiredCount" : { "Ref": "DesiredJenkinsMasterCount" },
+        "DesiredCount" : { "Ref": "DesiredJenkinsMasterTaskCount" },
         "HealthCheckGracePeriodSeconds" : { "Ref": "HealthCheckGracePeriodSeconds" },
         "LaunchType" : { "Ref" : "LaunchType" },
         "LoadBalancers" : [
           {
-            "ContainerName" : {"Ref": "ImageName"},
+            "ContainerName" : {"Ref": "MasterImageName"},
             "ContainerPort" : { "Ref": "ContainerPort" },
             "TargetGroupArn": {"Ref": "TargetGroup"}
           }
@@ -750,7 +983,7 @@
             { "Ref" : "AWS::NoValue" }
           ]
         },
-        "TaskDefinition" : { "Ref": "ECSTaskDefinition" }
+        "TaskDefinition" : { "Ref": "ECSMasterTaskDefinition" }
       }
     },
     "ApplicationELB": {
@@ -793,7 +1026,7 @@
         "Tags": [
           {
             "Key": "ECSCluster",
-            "Value": { "Ref": "Cluster" }
+            "Value": { "Ref": "MasterCluster" }
           }
         ]
       },
@@ -853,7 +1086,7 @@
         "Tags": [
           {
             "Key": "ECSCluster",
-            "Value": { "Ref": "Cluster" }
+            "Value": { "Ref": "MasterCluster" }
           }
         ],
         "TargetGroupAttributes": [
@@ -916,34 +1149,34 @@
           }}
         ],
         "LaunchConfigurationName": {
-          "Ref": "ContainerInstances"
+          "Ref": "MasterContainerInstances"
         },
         "MinSize": {
           "Fn::If": [
             "IsFargate",
             "0",
-            { "Ref": "MinECSInstances" }
+            { "Ref": "MinMasterECSInstances" }
           ]
         },
         "MaxSize": {
           "Fn::If": [
             "IsFargate",
             "0",
-            { "Ref": "MaxECSInstances" }
+            { "Ref": "MaxMasterECSInstances" }
           ]
         },
         "DesiredCapacity": {
           "Fn::If": [
             "IsFargate",
             "0",
-            { "Ref": "DesiredECSInstances" }
+            { "Ref": "DesiredMasterECSInstances" }
           ]
         },
         "Tags": [
           {
             "Key": "Name",
             "Value": {"Fn::Join": ["-", [
-              { "Ref": "Cluster"},
+              { "Ref": "MasterCluster"},
               "ECSInstance"
             ]]},
             "PropagateAtLaunch": "true"
@@ -965,7 +1198,74 @@
         }
       }
     },
-    "ContainerInstances":{
+    "ECSSlaveAutoScalingGroup":{
+      "Type":"AWS::AutoScaling::AutoScalingGroup",
+      "Properties": {
+        "VPCZoneIdentifier": [
+          {"Fn::ImportValue": { "Fn::Sub": [
+            "${VPCPrefix}-vpc-${PublicOrPrivate}SubnetAZ1", {
+              "VPCPrefix": {"Ref": "VPCPrefix"},
+              "PublicOrPrivate": {"Ref": "WebSubnets"}
+            }]
+          }},
+          {"Fn::ImportValue": { "Fn::Sub": [
+            "${VPCPrefix}-vpc-${PublicOrPrivate}SubnetAZ2", {
+              "VPCPrefix": {"Ref": "VPCPrefix"},
+              "PublicOrPrivate": {"Ref": "WebSubnets"}
+            }]
+          }}
+        ],
+        "LaunchConfigurationName": {
+          "Ref": "SlaveContainerInstances"
+        },
+        "MinSize": {
+          "Fn::If": [
+            "IsFargate",
+            "0",
+            { "Ref": "MinSlaveECSInstances" }
+          ]
+        },
+        "MaxSize": {
+          "Fn::If": [
+            "IsFargate",
+            "0",
+            { "Ref": "MaxSlaveECSInstances" }
+          ]
+        },
+        "DesiredCapacity": {
+          "Fn::If": [
+            "IsFargate",
+            "0",
+            { "Ref": "DesiredSlaveECSInstances" }
+          ]
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": {"Fn::Join": ["-", [
+              { "Ref": "SlaveCluster"},
+              "ECSInstance"
+            ]]},
+            "PropagateAtLaunch": "true"
+          }
+        ]
+      },
+      "CreationPolicy": {
+        "ResourceSignal": {
+          "Fn::If": [
+            "IsFargate",
+            { "Ref" : "AWS::NoValue" },
+            { "Timeout": "PT15M" }
+          ]
+        }
+      },
+      "UpdatePolicy": {
+        "AutoScalingReplacingUpdate": {
+          "WillReplace": "true"
+        }
+      }
+    },
+    "MasterContainerInstances":{
       "Type":"AWS::AutoScaling::LaunchConfiguration",
       "Properties":{
         "ImageId":{
@@ -1000,7 +1300,7 @@
                 "#!/bin/bash -xe\n",
                 "echo ECS_CLUSTER=",
                 {
-                  "Ref": "Cluster"
+                  "Ref": "MasterCluster"
                 },
                 " >> /etc/ecs/ecs.config\n",
 
@@ -1023,6 +1323,63 @@
                   "Ref":"AWS::StackName"
                 },
                 "         --resource ECSAutoScalingGroup ",
+                "         --region ",
+                {
+                  "Ref":"AWS::Region"
+                },
+                "\n"
+              ]
+            ]
+          }
+        }
+      }
+    },
+    "SlaveContainerInstances":{
+      "Type":"AWS::AutoScaling::LaunchConfiguration",
+      "Properties":{
+        "ImageId":{
+          "Fn::FindInMap":[
+            "RegionalConfigs",
+            {
+              "Ref":"AWS::Region"
+            },
+            "AMI"
+          ]
+        },
+        "SecurityGroups": [{
+          "Ref": "WebSG"
+        }],
+        "BlockDeviceMappings": [
+          {
+            "DeviceName": "/dev/xvdcz",
+            "Ebs": {
+              "VolumeSize": "50",
+              "DeleteOnTermination": true
+            }
+          }
+        ],
+        "InstanceType": { "Ref": "InstanceType" },
+        "IamInstanceProfile": { "Ref": "EC2InstanceProfile" },
+        "KeyName": {"Ref": "KeyPairName"},
+        "UserData": {
+          "Fn::Base64": {
+            "Fn::Join": [
+              "",
+              [
+                "#!/bin/bash -xe\n",
+                "echo ECS_CLUSTER=",
+                {
+                  "Ref": "SlaveCluster"
+                },
+                " >> /etc/ecs/ecs.config\n",
+
+                "yum install -y aws-cfn-bootstrap\n",
+                "/opt/aws/bin/cfn-signal -e $? ",
+                "         --stack ",
+                {
+                  "Ref":"AWS::StackName"
+                },
+                "         --resource ECSSlaveAutoScalingGroup ",
                 "         --region ",
                 {
                   "Ref":"AWS::Region"

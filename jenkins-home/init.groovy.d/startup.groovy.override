@@ -22,6 +22,9 @@ String ecsClusterName = System.getenv("ECS_CLUSTER")?:null;
 String ecsClusterArn = System.getenv("ECS_CLUSTER_ARN")?:null;
 String awsRegion = System.getenv("AWS_REGION")?:"us-east-1";
 String buildSlavesLogGroup = System.getenv("BUILD_SLAVES_LOG_GROUP");
+String slaveTaskDefinitionArn = System.getenv("SLAVE_TASK_DEFINITION_ARN");
+String securityGroup = System.getenv("SECURITY_GROUP");
+String subnets = System.getenv("SUBNETS");
 String elbName = System.getenv("ELB_NAME");
 
 Logger.global.info("[Running] startup script")
@@ -31,7 +34,10 @@ Logger.global.info("ECS_CLUSTER: $ecsClusterName")
 Logger.global.info("ECS_CLUSTER_ARN: $ecsClusterArn")
 Logger.global.info("ELB_NAME: $elbName")
 Logger.global.info("AWS_REGION: $awsRegion")
-Logger.global.info("SECURITY GROUPS: " + getSecurityGroups())
+Logger.global.info("SLAVE_TASK_DEFINITION_ARN: $slaveTaskDefinitionArn")
+Logger.global.info("SECURITY_GROUP: $securityGroup")
+Logger.global.info("SUBNETS: $subnets")
+//Logger.global.info("SECURITY GROUPS: " + getSecurityGroups())
 
 configureJenkinsURL()
 configureSecurity()
@@ -39,7 +45,7 @@ configureCloud()
 
 Jenkins.instance.save()
 
-buildJob('bootstrap', new ParametersAction(new StringParameterValue('NumberOfCopies', "60")))
+buildJob('bootstrap', new ParametersAction(new StringParameterValue('NumberOfCopies', "20")))
 
 Logger.global.info("[Done] startup script")
 
@@ -137,6 +143,9 @@ private ECSTaskTemplate createECSTaskTemplate(String label, String image, int so
     Logger.global.info("Creating ECS Template '$label' for image '$image' (memory: softMemory, cpu: $cpu)")
     String awsRegion = System.getenv("AWS_REGION")?:"us-east-1";
     String buildSlavesLogGroup = System.getenv("BUILD_SLAVES_LOG_GROUP");
+    String slaveTaskDefinitionArn = System.getenv("SLAVE_TASK_DEFINITION_ARN");
+    String securityGroup = System.getenv("SECURITY_GROUP");
+    String subnets = System.getenv("SUBNETS");
     List<ECSTaskTemplate.LogDriverOption> logDriverOpts = [
         new ECSTaskTemplate.LogDriverOption("awslogs-group", buildSlavesLogGroup),
         new ECSTaskTemplate.LogDriverOption("awslogs-region", awsRegion)
@@ -144,17 +153,24 @@ private ECSTaskTemplate createECSTaskTemplate(String label, String image, int so
     new ECSTaskTemplate(
             templateName = label,
             label = label,
+            taskDefinitionOverride = slaveTaskDefinitionArn,
             image = image,
+            launchType = "",
             remoteFSRoot = "/home/jenkins",
             //memory reserved
             memory = 0,
             //soft memory
             memoryReservation = softMemory,
             cpu = cpu,
+            subnets = subnets,
+            securityGroups = securityGroup,
+            assignPublicIp = false,
             privileged = false,
+            containerUser = "",
             logDriverOptions = logDriverOpts,
             environments = null,
             extraHosts = null,
-            mountPoints = null
+            mountPoints = null,
+            portMappings = null
     )
 }

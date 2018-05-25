@@ -19,12 +19,15 @@ AWS_ACCOUNT_ID=`aws sts get-caller-identity --output text --query Account`
 AWS_REGION=`aws configure get region`
 PROJECT_NAME=`jq -r '.Parameters.ProjectName' template-jenkins-cluster-params.json`
 ENVIRONMENT=`jq -r '.Parameters.Environment' template-jenkins-cluster-params.json`
-#IMAGE_TAG=$ENVIRONMENT-`date +"%Y-%m-%d-%H%M%S"`
-IMAGE_TAG='latest'
+IMAGE_TAG=$ENVIRONMENT-`date +"%Y-%m-%d-%H%M%S"`
+#IMAGE_TAG='latest'
+CLOUDFORMATION_BUCKET_NAME='mosaic-phoenix-microservice'
 
-IMAGE_NAME=`jq -r '.Parameters.ImageName' template-jenkins-cluster-params.json`
+IMAGE_NAME=`jq -r '.Parameters.MasterImageName' template-jenkins-cluster-params.json`
 ECR_REPO=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$IMAGE_NAME:$IMAGE_TAG
 
+# Upload template to S3 bucket
+aws s3 cp template-jenkins-cluster.json s3://$CLOUDFORMATION_BUCKET_NAME
 
 # Check for valid arguments
 if [ $# -ne 2 ]
@@ -50,11 +53,11 @@ sed "s/IMAGE_TAG/$IMAGE_TAG/g" template-jenkins-cluster-params.json > temp1.json
 python parameters_generator.py temp1.json > temp2.json
 
 # Validate the CloudFormation template before template execution.
-aws cloudformation validate-template --template-body file://template-jenkins-cluster.json
+aws cloudformation validate-template --template-url https://s3.amazonaws.com/$CLOUDFORMATION_BUCKET_NAME/template-jenkins-cluster.json
 
 # Create or update the CloudFormation stack with deploys your docker service to the Dev cluster.
 aws cloudformation $1-stack --stack-name $PROJECT_NAME-ecs-$ENVIRONMENT \
-    --template-body file://template-jenkins-cluster.json \
+    --template-url https://s3.amazonaws.com/$CLOUDFORMATION_BUCKET_NAME/'template-jenkins-cluster.json' \
     --parameters file://temp2.json \
     --capabilities CAPABILITY_NAMED_IAM
 
