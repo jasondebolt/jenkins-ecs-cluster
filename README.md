@@ -43,9 +43,9 @@ You can run the Jenkins cluster either by clicking the big yellow buttons below 
 <img src="https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png">
 </a>
 
-### Notes
+### Security Notes
+* All EC2 instances in this stack are not accessible over the internet by default. The ELB, however, is accessible over the internet by default.
 * The Jenkins servers and ELB are accessible to 10.0.0.0/16 by default in case you want to set up a peering connection through that CIDR range for VPN support if you decide to place your ELB in an private subnet.
-* 
 
 ### Deploying with the shell scripts
 * Tested on a Mac only
