@@ -48,6 +48,10 @@ You can run the Jenkins cluster either by clicking the big yellow buttons below 
 * All EC2 instances in this stack are not accessible over the internet by default. The ELB, however, is accessible over the internet by default.
 * The Jenkins servers and ELB are accessible to 10.0.0.0/16 by default in case you want to set up a peering connection through that CIDR range for VPN support if you decide to place your ELB in an private subnet.
 
+### Disclaimers
+* This solution is not perfect. All of the code in this repo was created in about 2 days. 
+* Please make sure to review/change this stack as needed to make it as secure as possible before attempting to use in production.
+
 ### Deploying with the shell scripts
 * Tested on a Mac only
 * $ brew install jq
