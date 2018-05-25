@@ -6,10 +6,11 @@ You can run the Jenkins cluster either by clicking the big yellow buttons below 
 1) Click on the VPC button below
 2) Name the stack "devops-vpc"
 3) Leave the default values, but <b> make sure to call the stack "devops-vpc"</b>.
-4) While the VPC stack is creating, create an AWS ACM certificate (https://console.aws.amazon.com/acm)
+4) While the VPC stack is creating, create an [AWS ACM SSL certificate](https://console.aws.amazon.com/acm)
 5) Click "request a public certificate" and enter a domain that you own.
 6) Create two entries: "your-domain.com" and "*.your-domain.com".
-7) If you do not own a domain, buy a test domain in route53 for $12 by clicking on "Registered Domains" in route53 (http://console.aws.amazon.com/route53)
+7) If you do not own a domain, buy a test domain in route53 for $12 by clicking on "Registered Domains" in the [Route53 console](http://console.aws.amazon.com/route53). Takes about 10-15 minutes to register the domain.
+8) While you are waiting for your verification email for your ACM, create a public hosted zone for your domain in the [Route53 console](http://console.aws.amazon.com/route53)
  
   
 
