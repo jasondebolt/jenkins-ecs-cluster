@@ -10,27 +10,27 @@
     "VPCCidrBlock": {
       "Type": "String",
       "Description": "The CIDR range for the VPC. Examples include 10.0.0.0/16, 10.1.0.0/16, 10.2.0.0/16, etc. Make sure to use different CIDR ranges for each VPC you create.",
-      "Default": "10.0.0.0/16"
+      "Default": "10.99.0.0/16"
     },
     "PrivateSubnet1CidrBlock": {
       "Type": "String",
       "Description": "The CIDR range for the first private subnet. Examples include 10.0.1.0/24, 10.1.1.0/24, 10.2.1.0/24, etc. Make sure the subnet CIDR range is within the same CIDR range as the VPC, and also make sure that the third digit is odd, since it's a private subnet.",
-      "Default": "10.0.1.0/24"
+      "Default": "10.99.1.0/24"
     },
     "PrivateSubnet2CidrBlock": {
       "Type": "String",
       "Description": "The CIDR range for the second private subnet. Examples include 10.0.3.0/24, 10.1.3.0/24, 10.2.3.0/24, etc. Make sure the subnet CIDR range is within the same CIDR range as the VPC, and also make sure that the third digit is odd, since it's a private subnet.",
-      "Default": "10.0.3.0/24"
+      "Default": "10.99.3.0/24"
     },
     "PublicSubnet1CidrBlock": {
       "Type": "String",
       "Description": "The CIDR range for the first public subnet. Examples include 10.0.2.0/24, 10.1.2.0/24, 10.2.2.0/24, etc. Make sure the subnet CIDR range is within the same CIDR range as the VPC, and also make sure that the third digit is even, since it's a public subnet.",
-      "Default": "10.0.2.0/24"
+      "Default": "10.99.2.0/24"
     },
     "PublicSubnet2CidrBlock": {
       "Type": "String",
       "Description": "The CIDR range for the second public subnet. Examples include 10.0.4.0/24, 10.1.4.0/24, 10.2.4.0/24, etc. Make sure the subnet CIDR range is within the same CIDR range as the VPC, and also make sure that the third digit is even, since it's a public subnet.",
-      "Default": "10.0.4.0/24"
+      "Default": "10.99.4.0/24"
     },
     "Tenancy": {
       "Type": "String",
