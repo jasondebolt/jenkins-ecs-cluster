@@ -949,7 +949,7 @@
         "LaunchType" : { "Ref" : "LaunchType" },
         "LoadBalancers" : [
           {
-            "ContainerName" : {"Ref": "MasterImageName"},
+            "ContainerName" : "jenkins-master",
             "ContainerPort" : { "Ref": "ContainerPort" },
             "TargetGroupArn": {"Ref": "TargetGroup"}
           }
