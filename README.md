@@ -5,7 +5,7 @@ You can run the Jenkins cluster either by clicking the big yellow buttons below 
 ### Deploying using the web interface
 1) Click on the VPC button below
 2) Name the stack "devops-vpc"
-3) Leave the default values, but <b> make sure to call the stack "devops-vpc".
+3) Leave the default values, but <b> make sure to call the stack "devops-vpc"</b>.
 4) While the VPC stack is creating, create an AWS ACM certificate (https://console.aws.amazon.com/acm)
 5) Click "request a public certificate" and enter a domain that you own.
 6) Create two entries: "your-domain.com" and "*.your-domain.com".
