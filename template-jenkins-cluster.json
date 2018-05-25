@@ -612,20 +612,30 @@
               },
               "Action": "sts:AssumeRole"
             },
-            {
-              "Effect": "Allow",
-              "Action": [
-                "ecr:GetAuthorizationToken",
-                "ecr:BatchCheckLayerAvailability",
-                "ecr:GetDownloadUrlForLayer",
-                "ecr:BatchGetImage",
-                "logs:CreateLogStream",
-                "logs:PutLogEvents"
-              ],
-              "Resource": "*"
-            }
           ]
         },
+        "Policies": [
+          {
+            "PolicyName": "TaskExecRole",
+            "PolicyDocument": {
+              "Version" : "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "ecr:GetAuthorizationToken",
+                    "ecr:BatchCheckLayerAvailability",
+                    "ecr:GetDownloadUrlForLayer",
+                    "ecr:BatchGetImage",
+                    "logs:CreateLogStream",
+                    "logs:PutLogEvents"
+                  ],
+                  "Resource": "*"
+                }
+              ]
+            }
+          }
+        ],
         "RoleName": {"Fn::Join": ["-", [
           {"Ref": "ProjectName"},
           {"Ref": "Environment"},
