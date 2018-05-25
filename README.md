@@ -29,6 +29,12 @@ You can run the Jenkins cluster either by clicking the big yellow buttons below 
 ### After the Jenkins Cluster stack has been deployed
 * Once the status of the Jenkins Cluster stack says "COMPLETED", click on the ["Outputs"](https://console.aws.amazon.com/cloudformation) tab to find the URL of the Jenkins Application Load Balancer.
 * Click on the URL to view the Jenkins master node.
+* Once in the Jenkins console, enable security and create a secure username and password.
+* Click on "Jenkins" > "Manage Jenkins" > "Configure Global Security". The check the "Enable Security" checkbox. 
+* Select "Jenkin's own user database" and disable the "Allow users to sign up" option.
+* Select the "Logged in users can do anything" and uncheck the "Allow anonymous read access" button.
+* For better security, consider placing Jenkins entirely behind a firewall/private subnet with secure remote access over VPN, or secure with OAuth via the Google Login plugin.
+
  
   
 
