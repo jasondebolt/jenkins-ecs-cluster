@@ -1,9 +1,9 @@
 {
   "Parameters": {
+    "ProjectName": "jenkins",
     "Environment": "devops",
     "MasterClusterName": "jenkins-master-cluster",
     "SlaveClusterName": "jenkins-slave-cluster",
-    "ProjectName": "jenkins",
     "MasterImageName": "jenkins-master",
     "SlaveImageName": "cloudbees/jnlp-slave-with-java-build-tools",
     "IpWhitelist": "73.15.22.99/32",
