@@ -27,8 +27,14 @@ You can run the Jenkins cluster either by clicking the big yellow buttons below 
 21) Check the checkbox at the bottom and click "Create" to create the CloudFormation stack. The stack will take about 10 minutes to create.
 
 ### After the Jenkins Cluster stack has been deployed
-21) Once the status of the Jenkins Cluster stack says "COMPLETED", click on the ["Outputs"](https://console.aws.amazon.com/cloudformation) tab to find the URL of the Jenkins Application Load Balancer. 
-22) Click on the URL
+* Once the status of the Jenkins Cluster stack says "COMPLETED", click on the ["Outputs"](https://console.aws.amazon.com/cloudformation) tab to find the URL of the Jenkins Application Load Balancer.
+* Click on the URL to view the Jenkins master node.
+* Once in the Jenkins console, enable security and create a secure username and password.
+* Click on "Jenkins" > "Manage Jenkins" > "Configure Global Security". The check the "Enable Security" checkbox. 
+* Select "Jenkin's own user database" and disable the "Allow users to sign up" option.
+* Select the "Logged in users can do anything" and uncheck the "Allow anonymous read access" button.
+* For better security, consider placing Jenkins entirely behind a firewall/private subnet with secure remote access over VPN, or secure with OAuth via the Google Login plugin.
+
  
   
 
@@ -47,6 +53,10 @@ You can run the Jenkins cluster either by clicking the big yellow buttons below 
 ### Security Notes
 * All EC2 instances in this stack are not accessible over the internet by default. The ELB, however, is accessible over the internet by default.
 * The Jenkins servers and ELB are accessible to 10.0.0.0/16 by default in case you want to set up a peering connection through that CIDR range for VPN support if you decide to place your ELB in an private subnet.
+
+### Disclaimers
+* This solution is not perfect. All of the code in this repo was created in about 2 days. 
+* Please make sure to review/change this stack as needed to make it as secure as possible before attempting to use in production.
 
 ### Deploying with the shell scripts
 * Tested on a Mac only
