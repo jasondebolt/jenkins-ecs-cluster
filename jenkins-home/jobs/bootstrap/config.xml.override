@@ -9,7 +9,7 @@
         <hudson.model.StringParameterDefinition>
           <name>NumberOfCopies</name>
           <description>For demo purpose, create some copies for each generated job, this will allow testing auto scaling by running all the jobs.</description>
-          <defaultValue>20</defaultValue>
+          <defaultValue>5</defaultValue>
         </hudson.model.StringParameterDefinition>
       </parameterDefinitions>
     </hudson.model.ParametersDefinitionProperty>

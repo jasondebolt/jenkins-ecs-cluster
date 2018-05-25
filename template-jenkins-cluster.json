@@ -420,7 +420,7 @@
         "AdjustmentType" : "PercentChangeInCapacity",
         "AutoScalingGroupName" : { "Ref": "ECSSlaveAutoScalingGroup" },
         "Cooldown"             : "60",
-        "ScalingAdjustment"    : "25"
+        "ScalingAdjustment"    : "50"
       }
     },
     "JenkinsScaleUpAlarm": {
@@ -472,8 +472,8 @@
           "MetricName": "CPUUtilization",
           "Namespace": "AWS/ECS",
           "Statistic": "Average",
-          "Period": "300",
-          "EvaluationPeriods": "1",
+          "Period": "600",
+          "EvaluationPeriods": "2",
           "Threshold": "5",
           "AlarmActions": [ { "Ref": "JenkinsScaleDownPolicy" } ],
           "Dimensions": [

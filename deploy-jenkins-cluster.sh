@@ -19,8 +19,8 @@ AWS_ACCOUNT_ID=`aws sts get-caller-identity --output text --query Account`
 AWS_REGION=`aws configure get region`
 PROJECT_NAME=`jq -r '.Parameters.ProjectName' template-jenkins-cluster-params.json`
 ENVIRONMENT=`jq -r '.Parameters.Environment' template-jenkins-cluster-params.json`
-IMAGE_TAG=$ENVIRONMENT-`date +"%Y-%m-%d-%H%M%S"`
-#IMAGE_TAG='latest'
+#IMAGE_TAG=$ENVIRONMENT-`date +"%Y-%m-%d-%H%M%S"`
+IMAGE_TAG='latest'
 CLOUDFORMATION_BUCKET_NAME='mosaic-phoenix-microservice'
 
 IMAGE_NAME=`jq -r '.Parameters.MasterImageName' template-jenkins-cluster-params.json`
