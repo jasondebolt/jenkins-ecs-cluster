@@ -4,7 +4,8 @@
   "Parameters": {
     "Environment": {
       "Description": "The environment (dev, testing, prod, etc.) of the VPC.",
-      "Type": "String"
+      "Type": "String",
+      "Default": "devops"
     },
     "VPCCidrBlock": {
       "Type": "String",

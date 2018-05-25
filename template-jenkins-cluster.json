@@ -18,8 +18,7 @@
     },
     "IpWhitelist": {
       "Description": "The IP CIDR range that can access the ELB on port 443. (i.e 42.52.12.67/32).",
-      "Type": "String",
-      "Default": "0.0.0.0/0"
+      "Type": "String"
     },
     "Domain": {
       "Description": "The domain name that this service will fall under.",
@@ -29,12 +28,12 @@
     "MasterClusterName": {
       "Description": "The name of the ECS Jenkins master cluster",
       "Type": "String",
-      "Default": "jenkins-cluster"
+      "Default": "jenkins-master-cluster"
     },
     "SlaveClusterName": {
       "Description": "The name of the ECS Jenkins slave cluster",
       "Type": "String",
-      "Default": "jenkins-cluster"
+      "Default": "jenkins-slave-cluster"
     },
     "SSLCertificateARN": {
       "Description": "The AWS ACM Certificate ARN.",
