@@ -10,12 +10,12 @@
 <h1>Launch the VPC</h1>
 
 </a>
-<a href="https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?templateURL=https://s3.amazonaws.com/jasondebolt-public/template-vpc.json"
+<a href="https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?templateURL=https://s3.amazonaws.com/jasondebolt-public/template-vpc.json">
 <img src="https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png">
 </a>
 
 <h1>Create a Jenkins cluster in AWS</h1>
 </a>
-<a href="https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?templateURL=https://s3.amazonaws.com/jasondebolt-public/template-jenkins-cluster.json"
+<a href="https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?templateURL=https://s3.amazonaws.com/jasondebolt-public/template-jenkins-cluster.json">
 <img src="https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png">
 </a>
