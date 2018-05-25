@@ -5,6 +5,7 @@
     "MasterClusterName": "jenkins-master-cluster",
     "SlaveClusterName": "jenkins-slave-cluster",
     "MasterImageName": "jenkins-master",
+    "MasterImageIsInECR": "true",
     "SlaveImageName": "cloudbees/jnlp-slave-with-java-build-tools",
     "IpWhitelist": "73.15.22.99/32",
     "AssignPublicIp": "ENABLED",

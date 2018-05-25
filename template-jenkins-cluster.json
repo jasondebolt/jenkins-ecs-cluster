@@ -122,9 +122,14 @@
       "Default": "true"
     },
     "MasterImageName": {
-      "Description": "The short name of the Jenkins master ECR Image",
+      "Description": "The short name of the Jenkins master ECR Image, or the full name of a public image.",
       "Type": "String",
-      "Default": "jenkins-master"
+      "Default": "jasondebolt/jenkins-ecs-master"
+    },
+    "MasterImageIsInECR": {
+      "Description": "Whether the docker image is hosted in AWS ECR.",
+      "Type": "String",
+      "Default": "false"
     },
     "SlaveImageName": {
       "Description": "The short name of the Jenkins slave docker Image",
@@ -329,6 +334,9 @@
     ]},
     "IsInternalELB": {"Fn::Equals": [
       {"Ref": "ELBSubnets"}, "Private"
+    ]},
+    "IsECRImage": {"Fn::Equals": [
+      {"Ref": "MasterImageIsInECR"}, "true"
     ]},
     "IsProd" : {"Fn::Equals" : [
       {"Ref" : "Environment"},
@@ -706,18 +714,24 @@
                 "Value": { "Ref" : "CloudwatchLogsGroupBuildSlaves"}
               }
             ],
-            "Image": { "Fn::Join" : [ "", [
-              {"Fn::Join": ["", [
-                {"Ref": "AWS::AccountId"},
-                ".dkr.ecr.",
-                {"Ref": "AWS::Region"},
-                ".amazonaws.com"
-              ]]},
-              "/",
-              { "Ref": "MasterImageName"},
-              ":",
-              { "Ref": "MasterImageVersion" }
-              ]]
+            "Image": {
+              "Fn::If": [
+                "IsECRImage",
+                { "Fn::Join" : [ "", [
+                  {"Fn::Join": ["", [
+                    {"Ref": "AWS::AccountId"},
+                    ".dkr.ecr.",
+                    {"Ref": "AWS::Region"},
+                    ".amazonaws.com"
+                  ]]},
+                  "/",
+                  { "Ref": "MasterImageName"},
+                  ":",
+                  { "Ref": "MasterImageVersion" }
+                  ]]
+                },
+                {"Ref": "MasterImageName"}
+              ]
             },
             "Cpu": {
               "Fn::If" : [
