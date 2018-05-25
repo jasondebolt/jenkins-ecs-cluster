@@ -27,8 +27,8 @@ You can run the Jenkins cluster either by clicking the big yellow buttons below 
 21) Check the checkbox at the bottom and click "Create" to create the CloudFormation stack. The stack will take about 10 minutes to create.
 
 ### After the Jenkins Cluster stack has been deployed
-21) Once the status of the Jenkins Cluster stack says "COMPLETED", click on the ["Outputs"](https://console.aws.amazon.com/cloudformation) tab to find the URL of the Jenkins Application Load Balancer. 
-22) Click on the URL
+* Once the status of the Jenkins Cluster stack says "COMPLETED", click on the ["Outputs"](https://console.aws.amazon.com/cloudformation) tab to find the URL of the Jenkins Application Load Balancer.
+* Click on the URL to view the Jenkins master node.
  
   
 
